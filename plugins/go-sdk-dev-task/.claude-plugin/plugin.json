@@ -1,0 +1,9 @@
+{
+  "name": "go-sdk-dev-task",
+  "description": "分解 OBS SDK Go 开发任务为可独立完成、可追踪、具有幂等性的子任务。当用户需要在华为云 OBS Go SDK 中开发新功能、修复 Bug 或重构代码时使用此技能。",
+  "author": {
+    "name": "Huawei Cloud OBS SDK Team",
+    "email": "obs@huaweicloud.com"
+  },
+  "version": "1.1.0"
+}

@@ -1,0 +1,50 @@
+{
+  "name": "xhyan-plugins",
+  "description": "Directory of popular Claude Code extensions including development tools, productivity plugins, and MCP integrations",
+  "owner": {
+    "name": "xhyan",
+    "email": "xhyan926@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "typescript-lsp",
+      "description": "TypeScript/JavaScript language server for enhanced code intelligence",
+      "version": "1.0.0",
+      "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+      },
+      "source": "./plugins/typescript-lsp",
+      "category": "development",
+      "strict": false,
+      "lspServers": {
+        "typescript": {
+          "command": "typescript-language-server",
+          "args": ["--stdio"],
+          "extensionToLanguage": {
+            ".ts": "typescript",
+            ".tsx": "typescriptreact",
+            ".js": "javascript",
+            ".jsx": "javascriptreact",
+            ".mts": "typescript",
+            ".cts": "typescript",
+            ".mjs": "javascript",
+            ".cjs": "javascript"
+          }
+        }
+      }
+    },
+  {
+    "name": "go-sdk-dev-task",
+    "description": "分解 OBS SDK Go 开发任务为可独立完成、可追踪、具有幂等性的子任务。当用户需要在华为云 OBS Go SDK 中开发新功能、修复 Bug 或重构代码时使用此技能。",
+    "source": "./plugins/go-sdk-dev-task",
+    "category": "development",
+    "strict": false,
+    "author": {
+      "name": "Huawei Cloud OBS SDK Team",
+      "email": "obs@huaweicloud.com"
+    },
+    "version": "1.1.0"
+  }
+  ]
+}

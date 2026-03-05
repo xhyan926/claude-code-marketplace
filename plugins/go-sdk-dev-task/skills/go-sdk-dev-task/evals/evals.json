@@ -1,0 +1,132 @@
+{
+  "skill_name": "go-sdk-dev-task",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "为 ObsClient 添加批量删除对象功能。用户希望能够一次性删除多个对象，提高删除效率。需要支持批量删除 API，包括请求参数设计、响应结构定义、错误处理等。",
+      "expected_output": "生成 SUBTASKS.md 文件，包含 4-6 个子任务，每个子任务可在 1-3 天内完成。子任务应覆盖：API 设计、模型定义、特性实现、单元测试、集成测试、文档更新。每个子任务应有对应的目录和模板文件。明确标记与 /go-sdk-ut skill 的集成点。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "SUBTASKS.md exists",
+          "type": "file_exists",
+          "path": "SUBTASKS.md"
+        },
+        {
+          "name": "Contains 4-6 subtasks",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "子任务 [1-6]",
+          "count": "4-6"
+        },
+        {
+          "name": "Subtask directories exist",
+          "type": "directory_count",
+          "path": "subtasks",
+          "min": 4,
+          "max": 6
+        },
+        {
+          "name": "Each subtask has TASK.md",
+          "type": "subtask_files_exist",
+          "path": "subtasks",
+          "required_files": ["TASK.md"]
+        },
+        {
+          "name": "Includes go-sdk-ut integration",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "/go-sdk-ut"
+        },
+        {
+          "name": "Subtasks cover design, implementation, testing",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "(设计|实现|测试|验收)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "修复 PutObject 在大文件上传时的内存泄漏问题。上传 5GB 大文件时，内存占用持续增长，最终导致 OOM。需要定位内存泄漏的根源，修复问题，并添加测试验证。",
+      "expected_output": "生成 SUBTASKS.md 文件，包含 3-5 个子任务，每个子任务可在 1-3 天内完成。子任务应覆盖：问题分析、根因定位、修复实施、测试验证、回归测试。应包含内存分析工具的使用说明。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "SUBTASKS.md exists",
+          "type": "file_exists",
+          "path": "SUBTASKS.md"
+        },
+        {
+          "name": "Contains 3-5 subtasks",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "子任务 [1-5]",
+          "count": "3-5"
+        },
+        {
+          "name": "Includes problem analysis phase",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "(问题分析|根因定位|定位问题)"
+        },
+        {
+          "name": "Includes testing phase",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "(测试验证|回归测试)"
+        },
+        {
+          "name": "Includes go-sdk-ut integration",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "/go-sdk-ut"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "重构 auth.go 中的签名逻辑。当前签名逻辑分散在 auth.go、authV2.go 和 authV4.go 中，代码重复且难以维护。需要提取公共逻辑，统一签名接口，提高代码可维护性。",
+      "expected_output": "生成 SUBTASKS.md 文件，包含 4-6 个子任务，每个子任务可在 1-3 天内完成。子任务应覆盖：架构设计、接口抽象、代码重构、测试迁移、文档更新、性能验证。应确保向后兼容性。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "SUBTASKS.md exists",
+          "type": "file_exists",
+          "path": "SUBTASKS.md"
+        },
+        {
+          "name": "Contains 4-6 subtasks",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "子任务 [1-6]",
+          "count": "4-6"
+        },
+        {
+          "name": "Includes architecture design",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "(架构设计|接口抽象|设计模式)"
+        },
+        {
+          "name": "Includes backward compatibility check",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "(向后兼容|兼容性测试|兼容性检查)"
+        },
+        {
+          "name": "Includes go-sdk-ut integration",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "/go-sdk-ut"
+        },
+        {
+          "name": "Includes performance verification",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "(性能验证|性能测试|性能对比)"
+        }
+      ]
+    }
+  ]
+}
