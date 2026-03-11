@@ -8,19 +8,6 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 import json
 
-try:
-    from jinja2 import (
-        Environment,
-        FileSystemLoader,
-        StrictUndefined,
-        Template,
-        TemplateNotFound,
-        TemplateSyntaxError,
-    )
-    JINJA2_AVAILABLE = True
-except ImportError:
-    JINJA2_AVAILABLE = False
-
 
 class TemplateError(Exception):
     """模板错误"""
@@ -37,25 +24,27 @@ class TemplateEngine:
         Args:
             template_dir: 模板目录路径，默认为 None（使用当前目录）
         """
-        if not JINJA2_AVAILABLE:
+        self.template_dir = template_dir or Path.cwd()
+        self.env = self._create_environment()
+
+    def _create_environment(self):
+        """创建 Jinja2 环境"""
+        try:
+            import jinja2
+        except ImportError:
             raise TemplateError(
                 "jinja2 未安装，请运行: pip install jinja2"
             )
 
-        self.template_dir = template_dir or Path.cwd()
-        self.env = self._create_environment()
-
-    def _create_environment(self) -> Environment:
-        """创建 Jinja2 环境"""
         if self.template_dir.exists():
-            loader = FileSystemLoader(str(self.template_dir))
+            loader = jinja2.FileSystemLoader(str(self.template_dir))
         else:
             # 如果模板目录不存在，使用空加载器
-            loader = FileSystemLoader(".")
+            loader = jinja2.FileSystemLoader(".")
 
-        env = Environment(
+        env = jinja2.Environment(
             loader=loader,
-            undefined=StrictUndefined,  # 严格模式，未定义的变量会报错
+            undefined=jinja2.StrictUndefined,  # 严格模式，未定义的变量会报错
             trim_blocks=True,  # 去除行尾空白
             lstrip_blocks=True,  # 去除行首空白
             keep_trailing_newline=True,  # 保留尾部换行符
@@ -126,9 +115,10 @@ class TemplateEngine:
 
             return result
 
-        except TemplateSyntaxError as e:
-            raise TemplateError(f"模板语法错误: {e}")
         except Exception as e:
+            import jinja2
+            if isinstance(e, jinja2.TemplateSyntaxError):
+                raise TemplateError(f"模板语法错误: {e}")
             raise TemplateError(f"模板渲染失败: {e}")
 
     def _find_template(self, template_name: str) -> Optional[Path]:
@@ -173,30 +163,19 @@ class TemplateEngine:
         Returns:
             str: Jinja2 兼容的内容
         """
+        try:
+            import jinja2
+        except ImportError:
+            raise TemplateError("jinja2 未安装")
+
         # Go template 语法映射
-        replacements = [
-            # 点表示法转换 {{ .Variable }} -> {{ Variable }}（Jinja2 支持）
-            # 但为了兼容性，我们保持点表示法，只是去掉前面的点
-            (r'\{\{\s*\.', '{{ '),  # {{ .Variable -> {{ Variable
-            (r'\}\}\s*\.', '}}.'),  # }}.Variable
-
-            # Go template 和 Jinja2 相同的语法，无需转换：
-            # {{ if }} -> {% if %}
-            # {{ end }} -> {% endif %}
-            # {{ range }} -> {% for %}
-            # {{ template }} -> {% include %} 或 {{ }}
-        ]
-
         # 转换控制结构
         content = content.replace('{{ if ', '{% if ')
         content = content.replace('{{ end }}', '{% endif %}')
         content = content.replace('{{ range ', '{% for ')
 
-        # 转换变量引用（保留点表示法以支持嵌套）
-        # Go template: {{ .TaskID }} -> Jinja2: {{ .TaskID }}
-        # Jinja2 不支持 {{ .TaskID }} 这样的点表示法，需要转换
-        # 这里我们使用一个简单的转换：{{ . -> {{
-        content = content.replace('{{ .', '{{')
+        # 转换变量引用（去掉点表示法）
+        content = content.replace('{{ .', '{{ ')
 
         return content
 
@@ -211,6 +190,11 @@ class TemplateEngine:
         Returns:
             str: 渲染后的内容
         """
+        try:
+            import jinja2
+        except ImportError:
+            raise TemplateError("jinja2 未安装")
+
         try:
             template = self.env.from_string(template_string)
             return template.render(context)
@@ -244,7 +228,7 @@ class TemplateEngine:
             raise TemplateError(f"渲染模板到文件失败: {e}")
 
     @staticmethod
-    def from_string(template_string: str) -> Template:
+    def from_string(template_string: str):
         """
         从字符串创建模板
 
@@ -254,8 +238,13 @@ class TemplateEngine:
         Returns:
             Template: Jinja2 模板对象
         """
-        env = Environment(
-            undefined=StrictUndefined,
+        try:
+            import jinja2
+        except ImportError:
+            raise TemplateError("jinja2 未安装")
+
+        env = jinja2.Environment(
+            undefined=jinja2.StrictUndefined,
             trim_blocks=True,
             lstrip_blocks=True,
         )

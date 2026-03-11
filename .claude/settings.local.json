@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(grep -r '{{' plugins/go-sdk-dev-task/skills/*/templates/ | head -50)",
-      "Bash(git add -A)"
+      "Bash(git add -A)",
+      "Bash(python3 -c \"from skills.common.simple_template import SimpleTemplateEngine; engine = SimpleTemplateEngine\\(\\); print\\(engine.render_string\\('Hello {{ Name }}!', {'Name': 'World'}\\)\\)\")",
+      "Bash(python3 -c \"import sys; sys.path.insert\\(0, '/Users/xhyan/xhyan-plugins-market/plugins/go-sdk-dev-task/skills/common'\\); from simple_template import SimpleTemplateEngine; engine = SimpleTemplateEngine\\(\\); print\\(engine.render_string\\('Hello {{ Name }}!', {'Name': 'World'}\\)\\)\")"
     ]
   }
 }
