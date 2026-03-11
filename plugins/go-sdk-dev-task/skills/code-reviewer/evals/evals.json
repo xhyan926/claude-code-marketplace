@@ -1,0 +1,106 @@
+{
+  "skill_name": "code-reviewer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "审查以下 Go 代码，检查是否符合 Effective Go 最佳实践",
+      "context": {
+        "code": "func getClient() *Client {\n  return &Client{}\n}"
+      },
+      "expected_output": "生成 REVIEW_COMMENTS.md，包含命名、错误处理、结构等方面的审查意见。",
+      "assertions": [
+        {
+          "name": "REVIEW_COMMENTS.md exists",
+          "type": "file_exists",
+          "path": "REVIEW_COMMENTS.md"
+        },
+        {
+          "name": "Contains effective go check",
+          "type": "file_content",
+          "path": "REVIEW_COMMENTS.md",
+          "pattern": "(Effective Go|Go 最佳实践)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "审查以下对象存储相关代码，检查 API 使用是否正确",
+      "context": {
+        "code": "func UploadObject(bucket, object string) error {\n  // implementation\n}"
+      },
+      "expected_output": "生成 REVIEW_COMMENTS.md，包含 API 使用、对象操作规范等方面的审查意见。",
+      "assertions": [
+        {
+          "name": "Contains API check",
+          "type": "file_content",
+          "path": "REVIEW_COMMENTS.md",
+          "pattern": "(API|对象操作)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "审查以下网络代码，检查超时处理和重试机制",
+      "context": {
+        "code": "func DoRequest(url string) error {\n  resp, err := http.Get(url)\n  return err\n}"
+      },
+      "expected_output": "生成 REVIEW_COMMENTS.md，指出缺少超时处理和重试机制的问题。",
+      "assertions": [
+        {
+          "name": "Contains timeout check",
+          "type": "file_content",
+          "path": "REVIEW_COMMENTS.md",
+          "pattern": "(超时|timeout)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "审查以下代码，检查 Clean Code 原则和函数复杂度",
+      "context": {
+        "code": "func ComplexFunction(a, b, c, d, e, f string) (string, error, int, float64) {\n  // 100 lines of nested code\n}"
+      },
+      "expected_output": "生成 REVIEW_COMMENTS.md，指出函数过长、参数过多、嵌套过深等问题。",
+      "assertions": [
+        {
+          "name": "Contains clean code check",
+          "type": "file_content",
+          "path": "REVIEW_COMMENTS.md",
+          "pattern": "(Clean Code|函数长度|嵌套)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "审查以下并发代码，检查是否安全",
+      "context": {
+        "code": "func ParallelProcess(data []string) {\n  for _, d := range data {\n    go process(d)\n  }\n}"
+      },
+      "expected_output": "生成 REVIEW_COMMENTS.md，检查 goroutine 管理和资源清理。",
+      "assertions": [
+        {
+          "name": "Contains concurrency check",
+          "type": "file_content",
+          "path": "REVIEW_COMMENTS.md",
+          "pattern": "(并发|goroutine|race)"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "审查使用设计模式的代码，检查模式应用是否恰当",
+      "context": {
+        "code": "func NewWithOption(opts ...Option) *Client {\n  // options pattern implementation\n}"
+      },
+      "expected_output": "生成 REVIEW_COMMENTS.md，评估设计模式的使用。",
+      "assertions": [
+        {
+          "name": "Contains design pattern check",
+          "type": "file_content",
+          "path": "REVIEW_COMMENTS.md",
+          "pattern": "(设计模式|Options Pattern|选项模式)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "skill_name": "go-sdk-ut",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "为 PutObject 函数编写 BDD 风格的单元测试",
+      "expected_output": "生成测试文件，使用 Should_ExpectedResult_When_Condition_Given_State 命名规范，使用 testify 断言。",
+      "assertions": [
+        {
+          "name": "Test file exists",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "func Test"
+        },
+        {
+          "name": "Uses BDD naming",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "Should_.*_When_.*_Given_"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "使用 httptest 模拟 HTTP 服务器进行测试",
+      "expected_output": "测试代码中使用 httptest.NewServer 创建模拟服务器，并在测试后调用 Close()。",
+      "assertions": [
+        {
+          "name": "Uses httptest",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "httptest.NewServer"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "使用 gomonkey mock 外部依赖",
+      "expected_output": "测试代码中使用 gomonkey.ApplyMethod 或 ApplyFunc 进行 mock，并在测试后调用 Reset()。",
+      "assertions": [
+        {
+          "name": "Uses gomonkey",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "gomonkey.(ApplyMethod|ApplyFunc)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "编写参数化测试，测试多种输入场景",
+      "expected_output": "测试代码中使用 testify 的 table-driven 测试模式，定义多个测试用例。",
+      "assertions": [
+        {
+          "name": "Uses table-driven tests",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "\\[\\].*struct\\{"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "验证测试覆盖率达到目标",
+      "expected_output": "运行 go test -cover，确认覆盖率 >= 80%。",
+      "assertions": [
+        {
+          "name": "Coverage check",
+          "type": "command",
+          "command": "go test -cover",
+          "expected_output": "coverage: 80%"
+        }
+      ]
+    }
+  ]
+}

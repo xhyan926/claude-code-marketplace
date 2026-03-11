@@ -1,0 +1,69 @@
+{
+  "skill_name": "go-sdk-fuzz",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "为 URL 解析函数编写模糊测试",
+      "expected_output": "生成 FuzzParseURL 测试函数，使用 +build fuzz tag，添加种子数据。",
+      "assertions": [
+        {
+          "name": "Fuzz file exists",
+          "type": "file_content",
+          "path": "fuzz_test.go",
+          "pattern": "func Fuzz"
+        },
+        {
+          "name": "Has build tag",
+          "type": "file_content",
+          "path": "fuzz_test.go",
+          "pattern": "//go:build fuzz"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "为 XML 解析函数编写模糊测试",
+      "expected_output": "测试函数添加种子数据，设置执行次数限制，添加内存监控。",
+      "assertions": [
+        {
+          "name": "Has seed data",
+          "type": "file_content",
+          "path": "fuzz_test.go",
+          "pattern": "f.Add"
+        },
+        {
+          "name": "Has execution limit",
+          "type": "file_content",
+          "path": "fuzz_test.go",
+          "pattern": "MaxExecutions"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "为签名函数编写边界条件模糊测试",
+      "expected_output": "测试函数包含空输入、极大输入、特殊字符等边界值测试。",
+      "assertions": [
+        {
+          "name": "Has boundary tests",
+          "type": "file_content",
+          "path": "fuzz_test.go",
+          "pattern": "(空|空字符串|特殊字符|极大)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "为网络请求函数编写带崩溃处理的模糊测试",
+      "expected_output": "测试函数使用 defer recover() 捕获 panic，避免测试崩溃。",
+      "assertions": [
+        {
+          "name": "Has crash handling",
+          "type": "file_content",
+          "path": "fuzz_test.go",
+          "pattern": "recover"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "skill_name": "sdk-doc",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "为 PutObject API 生成接口文档",
+      "expected_output": "生成 docs/object/PutObject.md 文件，包含方法签名、参数表、返回值、使用示例、错误码等完整内容。",
+      "assertions": [
+        {
+          "name": "Doc file exists",
+          "type": "file_exists",
+          "path": "docs/object/PutObject.md"
+        },
+        {
+          "name": "Has method signature",
+          "type": "file_content",
+          "path": "docs/object/PutObject.md",
+          "pattern": "func.*PutObject"
+        },
+        {
+          "name": "Has parameter table",
+          "type": "file_content",
+          "path": "docs/object/PutObject.md",
+          "pattern": "\\|.*参数.*\\|"
+        },
+        {
+          "name": "Has usage example",
+          "type": "file_content",
+          "path": "docs/object/PutObject.md",
+          "pattern": "(使用示例|示例代码)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "为多个 API 批量生成文档",
+      "expected_output": "为 ListObjects、GetObject、DeleteObject 生成文档，并更新 docs/README.md 索引。",
+      "assertions": [
+        {
+          "name": "Multiple doc files exist",
+          "type": "file_exists",
+          "path": "docs/object/ListObjects.md"
+        },
+        {
+          "name": "Index updated",
+          "type": "file_content",
+          "path": "docs/README.md",
+          "pattern": "(ListObjects|GetObject|DeleteObject)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "生成分块上传相关的文档",
+      "expected_output": "生成 docs/multipart/ 目录下的文档，包含初始化、上传、完成、取消等接口文档。",
+      "assertions": [
+        {
+          "name": "Multipart docs exist",
+          "type": "file_exists",
+          "path": "docs/multipart"
+        },
+        {
+          "name": "Has upload parts doc",
+          "type": "file_content",
+          "path": "docs/multipart",
+          "pattern": "(UploadPart|分块上传)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "生成常量定义和错误码文档",
+      "expected_output": "文档包含 SDK 中的常量定义和错误码说明。",
+      "assertions": [
+        {
+          "name": "Has constants",
+          "type": "file_content",
+          "path": "docs",
+          "pattern": "(const|常量定义)"
+        },
+        {
+          "name": "Has error codes",
+          "type": "file_content",
+          "path": "docs",
+          "pattern": "(错误码|ErrorCode)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "更新文档总索引 docs/README.md",
+      "expected_output": "索引包含所有 API 的链接，按功能分组，提供快速导航。",
+      "assertions": [
+        {
+          "name": "Index has navigation",
+          "type": "file_content",
+          "path": "docs/README.md",
+          "pattern": "(目录|快速导航|\\[.*\\]\\(.*\\)"
+        }
+      ]
+    }
+  ]
+}

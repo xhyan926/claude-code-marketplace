@@ -1,0 +1,62 @@
+{
+  "skill_name": "doc-verifier",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "验证 docs/object/PutObject.md 文档的完整性",
+      "expected_output": "生成 DOC_VERIFICATION.md，确认文档包含方法签名、参数说明、返回值、示例代码等完整内容。",
+      "assertions": [
+        {
+          "name": "DOC_VERIFICATION.md exists",
+          "type": "file_exists",
+          "path": "DOC_VERIFICATION.md"
+        },
+        {
+          "name": "Contains completeness check",
+          "type": "file_content",
+          "path": "DOC_VERIFICATION.md",
+          "pattern": "(文档完整性|方法签名|参数说明)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "验证文档中的示例代码是否可以编译",
+      "expected_output": "提取并编译示例代码，报告编译结果。",
+      "assertions": [
+        {
+          "name": "Contains compilation check",
+          "type": "file_content",
+          "path": "DOC_VERIFICATION.md",
+          "pattern": "(编译|compile)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "验证文档中的 API 签名是否与实际代码一致",
+      "expected_output": "对比文档中的 API 签名与代码中的定义，报告一致性。",
+      "assertions": [
+        {
+          "name": "Contains API consistency check",
+          "type": "file_content",
+          "path": "DOC_VERIFICATION.md",
+          "pattern": "(API 一致性|签名)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "验证文档的 Markdown 格式是否正确",
+      "expected_output": "检查文档的标题、代码块、表格等格式。",
+      "assertions": [
+        {
+          "name": "Contains format check",
+          "type": "file_content",
+          "path": "DOC_VERIFICATION.md",
+          "pattern": "(格式|Markdown|代码块)"
+        }
+      ]
+    }
+  ]
+}

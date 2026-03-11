@@ -1,0 +1,132 @@
+# API 变更跟踪
+
+本文件用于跟踪在当前子任务中新增或修改的 API 接口，以便自动触发文档生成。
+
+## 新增接口
+
+{{- range .NewAPIs }}
+### {{ .Name }}
+- **方法签名**：`{{ .Signature }}`
+- **功能描述**：{{ .Description }}
+- **所属特性**：{{ .Feature }}
+- **文档状态**：{{ .DocStatus }}
+{{- end }}
+
+## 修改接口
+
+{{- range .ModifiedAPIs }}
+### {{ .Name }}
+- **修改内容**：
+{{- range .Changes }}
+  - {{ .Type }}：{{ .Description }}
+{{- end }}
+- **功能影响**：{{ .Impact }}
+- **兼容性**：{{ .Compatibility }}
+- **文档状态**：{{ .DocStatus }}
+{{- end }}
+
+## 新增常量
+
+{{- if .NewConstants }}
+```go
+const (
+{{- range .NewConstants }}
+    {{ .Name }} {{ .Type }} = "{{ .Value }}"  // {{ .Description }}
+{{- end }}
+)
+```
+- **所属接口**：{{ .RelatedAPIs }}
+- **文档状态**：{{ .DocStatus }}
+{{- else }}
+- 无新增常量
+{{- end }}
+
+## 修改错误码
+
+{{- if .ModifiedErrorCodes }}
+| 错误码 | HTTP 状态码 | 说明 | 变更类型 |
+|--------|-------------|------|---------|
+{{- range .ModifiedErrorCodes }}
+| {{ .Code }} | {{ .HTTPStatus }} | {{ .Description }} | {{ .ChangeType }} |
+{{- end }}
+- **文档状态**：{{ .DocStatus }}
+{{- else }}
+- 无错误码变更
+{{- end }}
+
+## 文档生成检查清单
+
+在子任务完成后，确认以下项目：
+
+{{- range .Checklist }}
+- [ ] {{ . }}
+{{- end }}
+
+## 文档生成状态
+
+- **总接口数量**：{{ .TotalAPIs }}
+- **已生成文档数量**：{{ .GeneratedDocs }}
+- **待生成文档数量**：{{ .PendingDocs }}
+- **生成完成率**：{{ .CompletionRate }}%
+
+---
+
+## 使用说明
+
+1. 在子任务开发过程中，实时更新本文件
+2. 每完成一个接口的开发，立即记录到相应章节
+3. 子任务完成后，根据本文件调用 /sdk-doc skill 生成文档
+4. 文档生成后，更新对应的文档状态为 "generated"
+5. 将本文件包含在子任务验收报告中
+
+## 文档验证详细步骤
+
+### 步骤 1：文件存在性检查
+```bash
+# 检查文档文件是否生成
+ls -la docs/[feature]/API_Interface.md
+
+# 检查文档索引是否更新
+grep "API_Interface" docs/README.md
+```
+
+### 步骤 2：内容完整性检查
+- 确认方法签名准确无误
+- 验证参数说明详细完整
+- 检查返回值描述准确
+- 确认示例代码可运行
+
+### 步骤 3：格式规范检查
+- Markdown 格式正确
+- 代码块带语言标识
+- 表格格式规范
+- 链接有效可用
+
+### 步骤 4：索引更新检查
+- 确认总索引已添加接口链接
+- 检查特性目录下的文档组织
+- 验证导航结构完整
+
+### 步骤 5：示例代码验证
+```bash
+# 复制示例代码到测试文件
+cat docs/[feature]/API_Interface.md | grep -A 30 "使用示例" > test_example.go
+
+# 运行示例代码验证
+go run test_example.go
+```
+
+## 常见问题处理
+
+{{- range .CommonProblems }}
+### {{ .Title }}
+- **原因**：{{ .Cause }}
+- **解决**：{{ .Solution }}
+{{- end }}
+
+## 质量标准
+
+每个生成的文档必须满足：
+{{- range .QualityStandards }}
+- [ ] {{ . }}
+{{- end }}

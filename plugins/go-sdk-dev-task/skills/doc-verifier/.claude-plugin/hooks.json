@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "on_doc_complete": {
+      "trigger": "when .md doc files are created/updated",
+      "action": "/doc-verifier",
+      "args": "--doc-files={{ .DocFiles }}",
+      "description": "文档验证"
+    }
+  }
+}

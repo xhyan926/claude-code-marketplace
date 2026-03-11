@@ -1,0 +1,96 @@
+{
+  "skill_name": "go-sdk-tracker",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "将 subtasks/task-01 的状态更新为 in_progress",
+      "expected_output": "STATUS 文件内容为 'in_progress'，SUBTASKS.md 中对应复选框已更新。",
+      "context": {
+        "task_path": "subtasks/task-01",
+        "status": "in_progress"
+      },
+      "assertions": [
+        {
+          "name": "STATUS file exists",
+          "type": "file_exists",
+          "path": "subtasks/task-01/STATUS"
+        },
+        {
+          "name": "STATUS is in_progress",
+          "type": "file_content",
+          "path": "subtasks/task-01/STATUS",
+          "pattern": "in_progress"
+        },
+        {
+          "name": "SUBTASKS.md updated",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "子任务 1.*进行中"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "将 subtasks/task-02 的状态更新为 completed，所有必需文件已存在",
+      "expected_output": "STATUS 文件内容为 'completed'，SUBTASKS.md 中对应复选框已勾选。",
+      "context": {
+        "task_path": "subtasks/task-02",
+        "status": "completed"
+      },
+      "assertions": [
+        {
+          "name": "Required files exist",
+          "type": "file_content",
+          "path": "subtasks/task-02/TASK.md",
+          "pattern": "."
+        },
+        {
+          "name": "STATUS is completed",
+          "type": "file_content",
+          "path": "subtasks/task-02/STATUS",
+          "pattern": "completed"
+        },
+        {
+          "name": "SUBTASKS.md checked",
+          "type": "file_content",
+          "path": "SUBTASKS.md",
+          "pattern": "\\[x\\].*子任务 2"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "尝试将 subtasks/task-03 的状态更新为 completed，但 TASK.md 不存在",
+      "expected_output": "状态更新失败，返回验证错误，提示缺少必需文件。",
+      "context": {
+        "task_path": "subtasks/task-03",
+        "status": "completed"
+      },
+      "assertions": [
+        {
+          "name": "Returns validation error",
+          "type": "exception",
+          "exception_type": "ValidationError"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "使用 --force 参数将 subtasks/task-04 的状态更新为 completed，跳过验证",
+      "expected_output": "STATUS 文件内容为 'completed'，即使缺少必需文件也能更新。",
+      "context": {
+        "task_path": "subtasks/task-04",
+        "status": "completed",
+        "force": true
+      },
+      "assertions": [
+        {
+          "name": "STATUS is completed",
+          "type": "file_content",
+          "path": "subtasks/task-04/STATUS",
+          "pattern": "completed"
+        }
+      ]
+    }
+  ]
+}

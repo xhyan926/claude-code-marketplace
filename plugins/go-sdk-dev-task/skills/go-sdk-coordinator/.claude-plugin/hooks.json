@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "on_task_in_progress": {
+      "trigger": "when STATUS file contains 'in_progress'",
+      "action": "log_progress",
+      "description": "记录任务进度"
+    },
+    "on_task_completed": {
+      "trigger": "when STATUS file changes to 'completed'",
+      "action": "/code-reviewer",
+      "args": "--task={{ .TaskID }}",
+      "description": "自动触发代码审查"
+    },
+    "on_review_completed": {
+      "trigger": "when REVIEW_COMMENTS.md exists and approved=true",
+      "action": "/doc-verifier",
+      "args": "--task={{ .TaskID }}",
+      "description": "自动触发文档验证"
+    },
+    "on_all_subtasks_completed": {
+      "trigger": "when all subtasks STATUS = 'completed'",
+      "action": "generate_final_report",
+      "description": "生成最终验收报告"
+    }
+  }
+}

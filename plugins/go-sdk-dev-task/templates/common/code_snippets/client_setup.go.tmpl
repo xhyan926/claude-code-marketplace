@@ -1,0 +1,61 @@
+// 客户端设置模板
+
+package {{ .PackageName }}
+
+import (
+	"os"
+	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
+)
+
+// setupClient 创建并配置客户端
+func setupClient() (*obs.ObsClient, error) {
+	// 从环境变量读取配置
+	accessKey := os.Getenv("OBS_ACCESS_KEY")
+	secretKey := os.Getenv("OBS_SECRET_KEY")
+	endpoint := os.Getenv("OBS_ENDPOINT")
+
+	if accessKey == "" || secretKey == "" || endpoint == "" {
+		return nil, fmt.Errorf("缺少必需的环境变量: OBS_ACCESS_KEY, OBS_SECRET_KEY, OBS_ENDPOINT")
+	}
+
+	// 创建客户端
+	client, err := obs.New(accessKey, secretKey, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("创建客户端失败: %v", err)
+	}
+
+	// 配置客户端选项
+	{{- if .ConfigOptions }}
+	{{- range .ConfigOptions }}
+	client.{{ .OptionName }}({{ .OptionValue }})
+	{{- end }}
+	{{- end }}
+
+	return client, nil
+}
+
+// setupClientWithConfig 使用配置文件创建客户端
+func setupClientWithConfig(configPath string) (*obs.ObsClient, error) {
+	// 加载配置
+	cfg, err := loadConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建客户端
+	client, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// cleanupClient 清理客户端资源
+func cleanupClient(client *obs.ObsClient) error {
+	// 关闭客户端连接
+	if client != nil {
+		client.Close()
+	}
+	return nil
+}

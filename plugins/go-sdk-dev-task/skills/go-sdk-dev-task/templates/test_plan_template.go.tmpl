@@ -1,17 +1,19 @@
-# 测试计划：{{ TASK_ID }} - {{ TASK_NAME }}
+# 测试计划：{{ .TaskID }} - {{ .TaskName }}
 
 ## 测试目标
-{{ 描述测试要达到的目标 }}
+{{ .Objective }}
 
 ## 测试范围
 
 ### 单元测试
-- {{ 测试范围 1 }}
-- {{ 测试范围 2 }}
+{{- range .UnitTestScopes }}
+- {{ . }}
+{{- end }}
 
 ### 集成测试
-- {{ 测试范围 1 }}
-- {{ 测试范围 2 }}
+{{- range .IntegrationTestScopes }}
+- {{ . }}
+{{- end }}
 
 ## 测试用例设计
 
@@ -19,46 +21,35 @@
 使用 BDD 命名规范：Should_ExpectedResult_When_Condition_Given_State
 
 #### 正常场景
-1. **Should_return_success_When_valid_input_Given_proper_parameters**
-   - 输入：{{ 描述 }}
-   - 预期：{{ 描述 }}
-   - 验证点：{{ 列出 }}
-
-2. **Should_return_correct_data_When_request_succeeds_Given_existing_resource**
-   - 输入：{{ 描述 }}
-   - 预期：{{ 描述 }}
-   - 验证点：{{ 列出 }}
+{{- range .NormalScenarios }}
+1. **{{ .Name }}**
+   - 输入：{{ .Input }}
+   - 预期：{{ .Expected }}
+   - 验证点：{{ .ValidationPoints }}
+{{- end }}
 
 #### 异常场景
-1. **Should_return_error_When_invalid_input_Given_empty_parameters**
-   - 输入：{{ 描述 }}
-   - 预期：{{ 描述 }}
-   - 验证点：{{ 列出 }}
-
-2. **Should_handle_timeout_When_network_slow_Given_long_running_operation**
-   - 输入：{{ 描述 }}
-   - 预期：{{ 描述 }}
-   - 验证点：{{ 列出 }}
+{{- range .ExceptionScenarios }}
+1. **{{ .Name }}**
+   - 输入：{{ .Input }}
+   - 预期：{{ .Expected }}
+   - 验证点：{{ .ValidationPoints }}
+{{- end }}
 
 #### 边界场景
-1. **Should_handle_large_data_When_file_size_is_5GB_Given_upload_operation**
-   - 输入：{{ 描述 }}
-   - 预期：{{ 描述 }}
-   - 验证点：{{ 列出 }}
-
-2. **Should_handle_concurrent_requests_When_multiple_clients_Given_high_load**
-   - 输入：{{ 描述 }}
-   - 预期：{{ 描述 }}
-   - 验证点：{{ 列出 }}
+{{- range .BoundaryScenarios }}
+1. **{{ .Name }}**
+   - 输入：{{ .Input }}
+   - 预期：{{ .Expected }}
+   - 验证点：{{ .ValidationPoints }}
+{{- end }}
 
 ### 集成测试用例
-1. {{ 场景名称 }}
-   - 步骤：{{ 描述 }}
-   - 预期：{{ 描述 }}
-
-2. {{ 场景名称 }}
-   - 步骤：{{ 描述 }}
-   - 预期：{{ 描述 }}
+{{- range .IntegrationScenarios }}
+1. **{{ .Name }}**
+   - 步骤：{{ .Steps }}
+   - 预期：{{ .Expected }}
+{{- end }}
 
 ## 测试工具
 
@@ -80,7 +71,9 @@
   ```
 
 ### 可选工具
-- {{ 其他测试工具 }}
+{{- range .OptionalTools }}
+- {{ .Name }}: {{ .Description }}
+{{- end }}
 
 ## 测试策略
 
@@ -113,7 +106,7 @@ go tool cover -html=coverage.out -o coverage.html
 ```
 
 ### 测试环境
-- {{ 测试环境要求 }}
+{{ .TestEnvironment }}
 
 ## 验收标准
 
@@ -156,13 +149,14 @@ go tool cover -html=coverage.out -o coverage.html
 
 | 风险 | 影响 | 缓解措施 |
 |------|------|----------|
-| {{ 风险描述 }} | {{ 影响等级 }} | {{ 具体措施 }} |
+{{- range .TestRisks }}
+| {{ .Description }} | {{ .Impact }} | {{ .Mitigation }} |
+{{- end }}
 
 ## 测试计划执行时间表
 
 | 阶段 | 任务 | 预计时间 | 实际时间 |
 |------|------|----------|----------|
-| 单元测试编写 | {{ 任务 }} | {{ X 天 }} | {{ 天 }} |
-| 集成测试编写 | {{ 任务 }} | {{ Y 天 }} | {{ 天 }} |
-| 测试执行 | {{ 任务 }} | {{ Z 天 }} | {{ 天 }} |
-| 测试修复 | {{ 任务 }} | {{ W 天 }} | {{ 天 }} |
+{{- range .Schedule }}
+| {{ .Phase }} | {{ .Task }} | {{ .EstimatedTime }} | {{ .ActualTime }} |
+{{- end }}

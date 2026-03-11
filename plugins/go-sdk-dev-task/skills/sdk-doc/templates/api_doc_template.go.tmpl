@@ -1,0 +1,117 @@
+# {{ .FeatureName }} API 接口文档
+
+本文档包含 {{ .SDKName }} 中 {{ .FeatureName }} 相关的所有 API 接口说明。
+
+## 目录
+
+{{- range .APIs }}
+- [{{ .Name }}](#{{ .ID }})
+{{- end }}
+
+---
+
+{{- range .APIs }}
+## {{ .Name }}
+
+{{ .Description }}
+
+### 方法签名
+
+```go
+func {{ .Signature }}
+```
+
+### 参数说明
+
+{{ .InputType }}
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+{{- range .Params }}
+| {{ .Name }} | {{ .Type }} | {{ if .Required }}是{{ else }}否{{ end }} | {{ .Description }} |
+{{- end }}
+
+### 返回值
+
+{{ .OutputType }}
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+{{- range .Fields }}
+| {{ .Name }} | {{ .Type }} | {{ .Description }} |
+{{- end }}
+
+### 使用示例
+
+```go
+package main
+
+import (
+    "fmt"
+    {{ .ImportPath }}
+)
+
+func main() {
+    client, err := {{ .ImportPath }}.New("your-key", "your-secret", "endpoint")
+    if err != nil {
+        panic(err)
+    }
+
+    input := &{{ .ImportPath }}.{{ .InputType }}{
+{{- range .ExampleInput }}
+        {{ .Name }}: {{ .Value }},
+{{- end }}
+    }
+
+    output, err := client.{{ .MethodName }}(input)
+    if err != nil {
+        fmt.Printf("错误: %v\n", err)
+        return
+    }
+
+    fmt.Printf("结果: %v\n", output)
+}
+```
+
+### 错误码
+
+| 错误码 | HTTP 状态码 | 说明 |
+|--------|-------------|------|
+{{- range .ErrorCodes }}
+| {{ .Code }} | {{ .HTTPStatus }} | {{ .Description }} |
+{{- end }}
+
+### 注意事项
+
+{{ .Notes }}
+
+---
+{{- end }}
+
+## 常量定义
+
+```go
+{{ .ConstantsCode }}
+```
+
+## 使用场景
+
+{{- range .Scenarios }}
+### {{ .Name }}
+
+{{ .Description }}
+
+```go
+{{ .Code }}
+```
+{{- end }}
+
+## 相关文档
+
+- [API 参考文档]({{ .APIReferenceURL }})
+- [示例代码](../../examples/{{ .FeatureDir }}/)
+
+---
+
+**文档版本**: 1.0
+**更新日期**: {{ .UpdateDate }}

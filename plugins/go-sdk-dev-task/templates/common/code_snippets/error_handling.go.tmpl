@@ -1,0 +1,55 @@
+// 错误处理模板
+
+package {{ .PackageName }}
+
+import (
+	"fmt"
+	{{ .ImportPath }}
+)
+
+// handleError 处理错误
+func handleError(err error, operation string) error {
+	if err == nil {
+		return nil
+	}
+
+	// 检查是否是 SDK 错误
+	if sdkErr, ok := err.({{ .ImportPath }}.ObsError); ok {
+		return fmt.Errorf("%s 失败: 错误码=%s, 错误信息=%s",
+			operation, sdkErr.Code, sdkErr.Message)
+	}
+
+	return fmt.Errorf("%s 失败: %v", operation, err)
+}
+
+// handleErrorWithRetry 带重试的错误处理
+func handleErrorWithRetry(err error, operation string, retryCount int) error {
+	if err == nil {
+		return nil
+	}
+
+	// 判断是否可重试
+	if isRetryableError(err) && retryCount < {{ .MaxReties }} {
+		return fmt.Errorf("%s 失败，可重试: %v (重试次数: %d)",
+			operation, err, retryCount)
+	}
+
+	return handleError(err, operation)
+}
+
+// isRetryableError 判断错误是否可重试
+func isRetryableError(err error) bool {
+	if sdkErr, ok := err.({{ .ImportPath }}.ObsError); ok {
+		// 网络错误可重试
+		retryableCodes := []string{
+			"RequestTimeout",
+			"NetworkError",
+		}
+		for _, code := range retryableCodes {
+			if sdkErr.Code == code {
+				return true
+			}
+		}
+	}
+	return false
+}

@@ -1,0 +1,140 @@
+# 代码审查报告
+
+**审查对象**：{{ .TaskName }}
+**审查日期**：{{ .ReviewDate }}
+**审查者**：{{ .Reviewer }}
+**轮次**：{{ .Round }}
+
+## 审查总结
+
+- 总问题数：{{ .TotalIssues }}
+- 严重问题：{{ .CriticalCount }}
+- 一般问题：{{ .MajorCount }}
+- 建议问题：{{ .MinorCount }}
+
+## 审查结果
+
+{{- if .IsPassed }}
+✓ **通过**：无严重和一般问题
+{{- else if .NeedsRevision }}
+⚠️ **需要修改**：有一般问题需要修复
+{{- else }}
+✗ **需要返工**：有严重问题必须修复
+{{- end }}
+
+## 详细问题
+
+{{- if .CriticalIssues }}
+### 严重问题
+
+{{- range .CriticalIssues }}
+#### {{ .Title }}
+- **位置**：{{ .Location }}
+- **问题描述**：{{ .Description }}
+- **影响**：{{ .Impact }}
+- **建议**：{{ .Suggestion }}
+- **状态**：{{ .Status }}
+
+```go
+{{ .CodeSnippet }}
+```
+{{- end }}
+{{- else }}
+### 严重问题
+无严重问题。
+{{- end }}
+
+{{- if .MajorIssues }}
+### 一般问题
+
+{{- range .MajorIssues }}
+#### {{ .Title }}
+- **位置**：{{ .Location }}
+- **问题描述**：{{ .Description }}
+- **建议**：{{ .Suggestion }}
+- **状态**：{{ .Status }}
+
+```go
+{{ .CodeSnippet }}
+```
+{{- end }}
+{{- else }}
+### 一般问题
+无一般问题。
+{{- end }}
+
+{{- if .MinorIssues }}
+### 建议
+
+{{- range .MinorIssues }}
+#### {{ .Title }}
+- **位置**：{{ .Location }}
+- **建议**：{{ .Suggestion }}
+- **状态**：{{ .Status }}
+
+```go
+{{ .CodeSnippet }}
+```
+{{- end }}
+{{- else }}
+### 建议
+无建议。
+{{- end }}
+
+## 代码亮点
+
+{{- range .Highlights }}
+- {{ . }}
+{{- end }}
+
+## 总体评价
+
+{{ .OverallComments }}
+
+## 检查清单
+
+### Go 语言最佳实践
+- [ ] 命名规范
+- [ ] 错误处理完善
+- [ ] 并发安全
+- [ ] 接口设计合理
+
+### 对象存储领域
+- [ ] API 使用正确
+- [ ] 对象操作规范
+- [ ] 分块上传正确（如适用）
+
+### 网络编程
+- [ ] 超时处理
+- [ ] 重试机制
+- [ ] 连接管理
+
+### Clean Code
+- [ ] 函数单一职责
+- [ ] 命名清晰
+- [ ] 复杂度合理
+
+### 设计模式
+- [ ] 模式应用恰当
+- [ ] 避免过度设计
+
+### 并发安全
+- [ ] 无数据竞争
+- [ ] 锁使用正确
+
+## 下一步
+
+{{- if .IsPassed }}
+- [ ] 审查通过，可以进入下一环节
+- [ ] 触发 /doc-verifier 技能
+{{- else }}
+- [ ] 修复所有严重问题
+- [ ] 修复所有一般问题
+- [ ] 更新 REVIEW_COMMENTS.md 的状态
+- [ ] 请求再次审查
+{{- end }}
+
+---
+
+**最终状态**：{{ .FinalStatus }}
+**最后更新**：{{ .LastUpdated }}

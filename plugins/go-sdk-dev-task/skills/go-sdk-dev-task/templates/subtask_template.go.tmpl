@@ -1,0 +1,81 @@
+# 子任务编号：{{ .TaskID }} - {{ .TaskName }}
+
+## 目标
+{{ .Description }}
+
+## 范围
+### 包含内容
+{{- range .Includes }}
+- {{ . }}
+{{- end }}
+
+### 不包含内容
+{{- range .Excludes }}
+- {{ . }}
+{{- end }}
+
+## 依赖
+### 前置子任务
+{{- if .Prerequisites }}
+{{- range .Prerequisites }}
+- {{ . }}
+{{- end }}
+{{- else }}
+- 无
+{{- end }}
+
+### 阻塞以下子任务
+{{- if .Blocking }}
+{{- range .Blocking }}
+- {{ . }}
+{{- end }}
+{{- else }}
+- 无
+{{- end }}
+
+## 实施步骤
+{{- range .Steps }}
+1. {{ . }}
+{{- end }}
+
+## 技术细节
+### 涉及文件
+{{- range .Files }}
+- {{ .Path }} ({{ .Type }})
+{{- end }}
+
+### 关键代码
+```go
+{{ .KeyCode }}
+```
+
+### API 变更
+{{- if .APIChanges }}
+{{- range .APIChanges }}
+- {{ .Description }}
+{{- end }}
+{{- else }}
+- 无 API 变更
+{{- end }}
+
+## 验收标准
+{{- range .AcceptanceCriteria }}
+- [ ] {{ . }}
+{{- end }}
+
+## 测试计划
+详见 `TEST_PLAN.md`
+
+## 风险和缓解
+| 风险 | 影响 | 缓解措施 |
+|------|------|----------|
+{{- range .Risks }}
+| {{ .Description }} | {{ .Impact }} | {{ .Mitigation }} |
+{{- end }}
+
+## 预估时间
+- 工作量：{{ .EstimatedDays }} 天
+- 风险缓冲：{{ .RiskBufferDays }} 天
+
+## 状态
+{{ .Status }}

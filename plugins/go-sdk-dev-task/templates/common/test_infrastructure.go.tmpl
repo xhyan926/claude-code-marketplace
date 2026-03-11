@@ -1,0 +1,64 @@
+// 测试基础设施
+// 此文件包含测试中常用的基础设施代码
+
+package {{ .PackageName }}
+
+import (
+	"runtime"
+	"time"
+	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
+	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs/test/config"
+)
+
+// setupTestClient 创建测试客户端
+func setupTestClient() (*obs.ObsClient, error) {
+	cfg := config.LoadTestConfig()
+	client, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+// setupWithMemoryMonitor 设置内存监控
+func setupWithMemoryMonitor() (func() runtime.MemStats, func()) {
+	startTime := time.Now()
+
+	recordMemory := func() runtime.MemStats {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		return m
+	}
+
+	cleanup := func() {
+		elapsed := time.Since(startTime)
+		// 清理资源
+	}
+
+	return recordMemory, cleanup
+}
+
+// measurePerformance 测量性能
+func measurePerformance() (func(time.Time), func() time.Duration) {
+	startTime := time.Now{}
+
+	mark := func(t time.Time) {
+		startTime = t
+	}
+
+	measure := func() time.Duration {
+		return time.Since(startTime)
+	}
+
+	return mark, measure
+}
+
+// setupTestData 准备测试数据
+func setupTestData() (func() error, error) {
+	// 创建测试数据
+	cleanup := func() error {
+		// 清理测试数据
+		return nil
+	}
+	return cleanup, nil
+}

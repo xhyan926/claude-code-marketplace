@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "on_unit_tests_complete": {
+      "trigger": "when _test.go files are updated and tests pass",
+      "action": "/code-reviewer",
+      "args": "--source={{ .SourceFiles }}",
+      "description": "代码审查"
+    },
+    "on_review_complete": {
+      "trigger": "when REVIEW_COMMENTS.md is created",
+      "action": "await_fix",
+      "description": "等待开发修复"
+    }
+  }
+}

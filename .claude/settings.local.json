@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r '{{' plugins/go-sdk-dev-task/skills/*/templates/ | head -50)",
+      "Bash(git add -A)"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+## {{ .Title }}
+
+{{- if .QualityChecks }}
+### 质量验收
+{{- range .QualityChecks }}
+- [ ] {{ . }}
+{{- end }}
+{{- end }}
+
+{{- if .TestChecks }}
+### 测试验收
+{{- range .TestChecks }}
+- [ ] {{ . }}
+{{- end }}
+{{- end }}
+
+{{- if .DocChecks }}
+### 文档验收
+{{- range .DocChecks }}
+- [ ] {{ . }}
+{{- end }}
+{{- end }}
+
+{{- if .CodeChecks }}
+### 代码验收
+{{- range .CodeChecks }}
+- [ ] {{ . }}
+{{- end }}
+{{- end }}

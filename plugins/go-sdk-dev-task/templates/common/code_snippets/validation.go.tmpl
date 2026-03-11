@@ -1,0 +1,60 @@
+// 验证模板
+
+package {{ .PackageName }}
+
+import (
+	"fmt"
+	"strings"
+)
+
+// validateNotEmpty 验证非空
+func validateNotEmpty(value, fieldName string) error {
+	if strings.TrimSpace(value) == "" {
+		return fmt.Errorf("%s 不能为空", fieldName)
+	}
+	return nil
+}
+
+// validateLength 验证长度
+func validateLength(value string, fieldName string, min, max int) error {
+	length := len(value)
+	if length < min {
+		return fmt.Errorf("%s 长度不能小于 %d (当前: %d)", fieldName, min, length)
+	}
+	if length > max {
+		return fmt.Errorf("%s 长度不能大于 %d (当前: %d)", fieldName, max, length)
+	}
+	return nil
+}
+
+// validateRange 验证范围
+func validateRange(value, fieldName string, min, max int) error {
+	if value < min {
+		return fmt.Errorf("%s 不能小于 %d (当前: %d)", fieldName, min, value)
+	}
+	if value > max {
+		return fmt.Errorf("%s 不能大于 %d (当前: %d)", fieldName, max, value)
+	}
+	return nil
+}
+
+// validatePattern 验证模式
+func validatePattern(value, fieldName, pattern string) error {
+	matched, err := regexp.MatchString(pattern, value)
+	if err != nil {
+		return fmt.Errorf("验证 %s 时出错: %v", fieldName, err)
+	}
+	if !matched {
+		return fmt.Errorf("%s 格式不正确", fieldName)
+	}
+	return nil
+}
+
+// validateURL 验证 URL
+func validateURL(url, fieldName string) error {
+	// 简单的 URL 验证
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		return fmt.Errorf("%s 必须是有效的 HTTP/HTTPS URL", fieldName)
+	}
+	return nil
+}

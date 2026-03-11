@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "on_status_changed": {
+      "trigger": "when STATUS file changes",
+      "action": "update_subtasks_md",
+      "description": "更新子任务列表状态"
+    },
+    "on_task_completed": {
+      "trigger": "when STATUS file = 'completed'",
+      "action": "trigger_coordinator",
+      "description": "通知协调器任务完成"
+    }
+  }
+}

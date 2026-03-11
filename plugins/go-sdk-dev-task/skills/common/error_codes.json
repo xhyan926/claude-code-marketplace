@@ -1,0 +1,50 @@
+{
+  "SkillError": {
+    "code": 1000,
+    "message": "技能执行错误"
+  },
+  "ValidationError": {
+    "code": 1001,
+    "message": "验证错误"
+  },
+  "TemplateError": {
+    "code": 2000,
+    "message": "模板错误"
+  },
+  "FileSystemError": {
+    "code": 3000,
+    "message": "文件系统错误"
+  },
+  "DependencyError": {
+    "code": 4000,
+    "message": "依赖错误"
+  },
+  "SkillExecutionError": {
+    "code": 5000,
+    "message": "技能执行错误"
+  },
+  "FileNotFoundError": {
+    "code": 3001,
+    "message": "文件未找到"
+  },
+  "FileWriteError": {
+    "code": 3002,
+    "message": "文件写入失败"
+  },
+  "ConfigError": {
+    "code": 5001,
+    "message": "配置错误"
+  },
+  "InvalidInputError": {
+    "code": 1002,
+    "message": "无效的输入"
+  },
+  "MissingRequiredFieldError": {
+    "code": 1003,
+    "message": "缺少必需字段"
+  },
+  "TimeoutError": {
+    "code": 5002,
+    "message": "执行超时"
+  }
+}

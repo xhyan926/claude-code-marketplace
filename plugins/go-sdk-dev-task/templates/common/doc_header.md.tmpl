@@ -1,0 +1,18 @@
+{{ .Title }}
+
+**生成时间**：{{ .Timestamp }}
+{{ if .Author }}
+**作者**：{{ .Author }}
+{{- end }}
+{{ if .Version }}
+**版本**：{{ .Version }}
+{{- end }}
+
+## 目录
+
+{{- range .Sections }}
+- [{{ .Name }}](#{{ .ID }})
+{{- end }}
+
+---
+

@@ -1,0 +1,106 @@
+# 文档生成验收报告：{{ .FeatureName }}
+
+**生成时间**：{{ .Timestamp }}
+
+## 文档生成总结
+
+### 生成的文档
+{{- range .GeneratedDocs }}
+- [{{ .Name }}]({{ .Path }})
+{{- end }}
+
+### 文档统计
+- **API 接口数量**：{{ .APICount }}
+- **文档文件数量**：{{ .DocCount }}
+- **示例代码数量**：{{ .ExampleCount }}
+- **错误码数量**：{{ .ErrorCodeCount }}
+
+## 文档质量检查
+
+### 完整性检查
+{{- range .CompletenessChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+### 准确性检查
+{{- range .AccuracyChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+### 可读性检查
+{{- range .ReadabilityChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+## 示例代码验证
+
+### 验证结果
+- **示例代码总数**：{{ .TotalExamples }}
+- **可运行数量**：{{ .RunnableExamples }}
+- **编译通过数量**：{{ .CompiledExamples }}
+- **测试通过数量**：{{ .TestedExamples }}
+
+### 验证详情
+{{- range .ExampleVerifications }}
+| 示例 | 编译 | 运行 | 输出 |
+|------|------|------|------|
+| {{ .Name }} | {{ if .Compiled }}✓{{ else }}✗{{ end }} | {{ if .Runnable }}✓{{ else }}✗{{ end }} | {{ .Output }} |
+{{- end }}
+
+## 索引更新检查
+
+### 文档索引
+{{- range .IndexChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+### 导航链接
+{{- range .LinkChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+## 文档格式检查
+
+### Markdown 格式
+- [ ] 标题层级正确
+- [ ] 代码块带语言标识
+- [ ] 表格格式规范
+- [ ] 列表格式正确
+
+### 代码格式
+- [ ] 代码缩进正确
+- [ ] 变量命名规范
+- [ ] 注释完整清晰
+- [ ] 导入语句完整
+
+## 错误码验证
+
+### 错误码完整性
+{{- range .ErrorCodeChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+### 错误码准确性
+{{- range .ErrorCodeAccuracyChecks }}
+- [ ] {{ . }}
+{{- end }}
+
+## 验收结论
+
+### 评审结果
+- [ ] 通过
+- [ ] 需要修改
+- [ ] 需要返工
+
+### 评审意见
+{{ .ReviewComments }}
+
+### 后续行动
+{{- range .NextActions }}
+- {{ . }}
+{{- end }}
+
+---
+
+**文档状态**：{{ .DocStatus }}
+**最后更新**：{{ .UpdateDate }}

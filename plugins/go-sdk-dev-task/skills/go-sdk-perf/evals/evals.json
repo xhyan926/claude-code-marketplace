@@ -1,0 +1,81 @@
+{
+  "skill_name": "go-sdk-perf",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "为 PutObject 函数编写轻量级性能基准测试",
+      "expected_output": "生成 BenchmarkLight_PutObject 测试函数，使用 +build perf tag，设置 b.N。",
+      "assertions": [
+        {
+          "name": "Benchmark file exists",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "func Benchmark"
+        },
+        {
+          "name": "Has build tag",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "//go:build perf"
+        },
+        {
+          "name": "Is light test",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "BenchmarkLight"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "为上传操作编写深度性能基准测试",
+      "expected_output": "生成 BenchmarkDeep_Upload 测试函数，包含内存监控和资源使用统计。",
+      "assertions": [
+        {
+          "name": "Has memory monitoring",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "runtime.ReadMemStats"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "为并发操作编写性能基准测试",
+      "expected_output": "生成 BenchmarkConcurrent_ListObjects 测试函数，测试不同并发级别的性能。",
+      "assertions": [
+        {
+          "name": "Has concurrency test",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "BenchmarkConcurrent"
+        },
+        {
+          "name": "Has parallel execution",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "b.RunParallel"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "编写性能回归测试，与基线对比",
+      "expected_output": "定义性能基线，检查当前性能是否低于基线的 90%。",
+      "assertions": [
+        {
+          "name": "Has baseline",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "performanceBaseline"
+        },
+        {
+          "name": "Has regression check",
+          "type": "file_content",
+          "path": "benchmark_test.go",
+          "pattern": "performanceThreshold|checkPerformanceDegradation"
+        }
+      ]
+    }
+  ]
+}

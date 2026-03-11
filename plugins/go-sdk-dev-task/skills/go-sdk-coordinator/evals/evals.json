@@ -1,0 +1,41 @@
+{
+  "skill_name": "go-sdk-coordinator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "当 task-01 状态变为 in_progress 时，coordinator 应记录进度",
+      "expected_output": "coordinator 检测到 STATUS 变化，更新进度日志，不触发其他技能。",
+      "assertions": [
+        {
+          "name": "Progress logged",
+          "type": "file_exists",
+          "path": "COORDINATOR_PROGRESS.md"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "当 task-01 状态变为 completed 时，coordinator 应触发 code-reviewer",
+      "expected_output": "coordinator 检测到 completed 状态，调用 /code-reviewer，传递 task-01 参数。",
+      "assertions": [
+        {
+          "name": "Reviewer triggered",
+          "type": "file_exists",
+          "path": "REVIEW_COMMENTS.md"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "当所有子任务完成时，coordinator 应生成最终报告",
+      "expected_output": "所有 STATUS 文件为 completed 后，coordinator 生成 FINAL_REPORT.md。",
+      "assertions": [
+        {
+          "name": "Final report exists",
+          "type": "file_exists",
+          "path": "FINAL_REPORT.md"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "skill_name": "go-sdk-integration",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "编写端到端测试，验证完整的对象上传流程",
+      "expected_output": "生成测试函数，模拟客户端创建、对象上传、结果验证的完整流程。",
+      "assertions": [
+        {
+          "name": "Has E2E test",
+          "type": "file_content",
+          "path": "integration_test.go",
+          "pattern": "(端到端|E2E|完整流程)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "使用 mock 服务进行集成测试",
+      "expected_output": "测试代码使用 httptest 创建模拟 OBS 服务器，验证客户端与服务器的交互。",
+      "assertions": [
+        {
+          "name": "Uses mock server",
+          "type": "file_content",
+          "path": "integration_test.go",
+          "pattern": "httptest.NewServer"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "验证测试后的资源清理",
+      "expected_output": "测试函数包含清理代码，确保创建的临时对象被删除。",
+      "assertions": [
+        {
+          "name": "Has cleanup",
+          "type": "file_content",
+          "path": "integration_test.go",
+          "pattern": "(清理|cleanup|DeleteObject|DeleteBucket)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "编写多场景集成测试，覆盖成功和失败场景",
+      "expected_output": "测试包含正常上传、权限错误、网络错误等多种场景。",
+      "assertions": [
+        {
+          "name": "Has multiple scenarios",
+          "type": "file_content",
+          "path": "integration_test.go",
+          "pattern": "(成功|失败|权限|网络错误)"
+        }
+      ]
+    }
+  ]
+}

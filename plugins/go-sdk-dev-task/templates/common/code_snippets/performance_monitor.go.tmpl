@@ -1,0 +1,86 @@
+// 性能监控模板
+
+package {{ .PackageName }}
+
+import (
+	"runtime"
+	"time"
+)
+
+// PerformanceMetrics 性能指标
+type PerformanceMetrics struct {
+	StartTime     time.Time
+	EndTime       time.Time
+	Elapsed       time.Duration
+	AllocBefore   uint64
+	AllocAfter    uint64
+	AllocDelta    int64
+	GCCountBefore uint32
+	GCCountAfter  uint32
+	GCDelta       uint32
+}
+
+// NewPerformanceMonitor 创建性能监控器
+func NewPerformanceMonitor() *PerformanceMetrics {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	return &PerformanceMetrics{
+		StartTime:     time.Now(),
+		AllocBefore:   m.Alloc,
+		GCCountBefore: m.NumGC,
+	}
+}
+
+// Stop 停止监控并记录指标
+func (pm *PerformanceMetrics) Stop() {
+	pm.EndTime = time.Now()
+	pm.Elapsed = pm.EndTime.Sub(pm.StartTime)
+
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	pm.AllocAfter = m.Alloc
+	pm.AllocDelta = int64(m.Alloc) - int64(pm.AllocBefore)
+	pm.GCCountAfter = m.NumGC
+	pm.GCDelta = m.NumGC - pm.GCCountBefore
+}
+
+// String 返回性能指标字符串
+func (pm *PerformanceMetrics) String() string {
+	return fmt.Sprintf(
+		"耗时: %v, 内存变化: %d bytes, GC次数: %d",
+		pm.Elapsed,
+		pm.AllocDelta,
+		pm.GCDelta,
+	)
+}
+
+// Report 返回详细的性能报告
+func (pm *PerformanceMetrics) Report() string {
+	lines := []string{
+		"=== 性能指标 ===",
+		fmt.Sprintf("开始时间: %s", pm.StartTime.Format("15:04:05.000")),
+		fmt.Sprintf("结束时间: %s", pm.EndTime.Format("15:04:05.000")),
+		fmt.Sprintf("执行耗时: %v", pm.Elapsed),
+		"",
+		"内存使用:",
+		fmt.Sprintf("  开始: %d bytes", pm.AllocBefore),
+		fmt.Sprintf("  结束: %d bytes", pm.AllocAfter),
+		fmt.Sprintf("  变化: %+d bytes", pm.AllocDelta),
+		"",
+		"GC 情况:",
+		fmt.Sprintf("  开始次数: %d", pm.GCCountBefore),
+		fmt.Sprintf("  结束次数: %d", pm.GCCountAfter),
+		fmt.Sprintf("  新增次数: %d", pm.GCDelta),
+	}
+	return strings.Join(lines, "\n")
+}
+
+// checkMemoryLeak 检查内存泄漏
+func checkMemoryLeak(pm *PerformanceMetrics, threshold uint64) bool {
+	if pm.AllocDelta > int64(threshold) {
+		return true
+	}
+	return false
+}
