@@ -1,7 +1,7 @@
 """
 验证器模块
 
-提供常用的验证功能。
+提供常用的验证功能，集成 Google Go 规范和 LSP 检查。
 """
 
 from pathlib import Path
@@ -9,10 +9,30 @@ from typing import Any, List, Optional, Dict, Callable
 import re
 
 from .error_handler import ValidationError
+from .lsp_support import LSPSupport
+from .naming_standards import GoNamingStandards, NamingCategory
 
 
 class Validator:
     """验证器"""
+
+    # Google Go 规范和 LSP 支持实例
+    lsp_support = None
+    naming_standards = None
+
+    @classmethod
+    def initialize_go_standards(cls, project_root: str = None):
+        """初始化 Google Go 规范支持
+
+        Args:
+            project_root: 项目根目录
+        """
+        if project_root is None:
+            from pathlib import Path
+            project_root = str(Path(__file__).parent.parent.parent.parent)
+
+        cls.lsp_support = LSPSupport(project_root)
+        cls.naming_standards = GoNamingStandards()
 
     @staticmethod
     def not_empty(value: Any, field_name: str = "value") -> None:
@@ -327,3 +347,301 @@ class Validator:
         """
         if not validator(value):
             raise ValidationError(error_message, field_name)
+
+    # ===== Google Go 规范验证方法 =====
+
+    @classmethod
+    def validate_go_package_name(cls, package_name: str) -> None:
+        """验证 Go 包名符合 Google Go 规范
+
+        Args:
+            package_name: 包名
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if cls.naming_standards is None:
+            cls.initialize_go_standards()
+
+        is_valid, errors = cls.naming_standards.validate_package_name(package_name)
+        if not is_valid:
+            raise ValidationError(
+                f"包名 '{package_name}' 不符合 Google Go 规范: {', '.join(errors)}",
+                "package_name"
+            )
+
+    @classmethod
+    def validate_go_function_name(cls, function_name: str, is_public: bool = True) -> None:
+        """验证 Go 函数名符合 Google Go 规范
+
+        Args:
+            function_name: 函数名
+            is_public: 是否为公共函数
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if cls.naming_standards is None:
+            cls.initialize_go_standards()
+
+        category = NamingCategory.FUNCTION if is_public else NamingCategory.VARIABLE
+        is_valid, errors = cls.naming_standards.validate_function_name(function_name, category)
+        if not is_valid:
+            raise ValidationError(
+                f"函数名 '{function_name}' 不符合 Google Go 规范: {', '.join(errors)}",
+                "function_name"
+            )
+
+    @classmethod
+    def validate_go_variable_name(cls, variable_name: str) -> None:
+        """验证 Go 变量名符合 Google Go 规范
+
+        Args:
+            variable_name: 变量名
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if cls.naming_standards is None:
+            cls.initialize_go_standards()
+
+        is_valid, errors = cls.naming_standards.validate_variable_name(variable_name)
+        if not is_valid:
+            raise ValidationError(
+                f"变量名 '{variable_name}' 不符合 Google Go 规范: {', '.join(errors)}",
+                "variable_name"
+            )
+
+    @classmethod
+    def validate_go_constant_name(cls, constant_name: str) -> None:
+        """验证 Go 常量名符合 Google Go 规范
+
+        Args:
+            constant_name: 常量名
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if cls.naming_standards is None:
+            cls.initialize_go_standards()
+
+        is_valid, errors = cls.naming_standards.validate_constant_name(constant_name)
+        if not is_valid:
+            raise ValidationError(
+                f"常量名 '{constant_name}' 不符合 Google Go 规范: {', '.join(errors)}",
+                "constant_name"
+            )
+
+    @classmethod
+    def validate_go_code_lsp_friendly(cls, code: str, file_path: str = None) -> None:
+        """验证 Go 代码符合 LSP 友好规范
+
+        Args:
+            code: Go 代码
+            file_path: 文件路径（可选）
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if cls.lsp_support is None:
+            cls.initialize_go_standards()
+
+        is_valid, errors = cls.lsp_support.validate_lsp_friendly_code(code)
+        if not is_valid:
+            field_name = "code" if file_path is None else file_path
+            raise ValidationError(
+                f"代码不符合 LSP 友好规范: {', '.join(errors)}",
+                field_name
+            )
+
+    @classmethod
+    def validate_go_file_lsp_friendly(cls, file_path: Path) -> None:
+        """验证 Go 文件符合 LSP 友好规范
+
+        Args:
+            file_path: 文件路径
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if cls.lsp_support is None:
+            cls.initialize_go_standards()
+
+        result = cls.lsp_support.check_lsp_compatibility(str(file_path))
+        if not result['valid']:
+            raise ValidationError(
+                f"文件 '{file_path}' 不符合 LSP 友好规范: {', '.join(result['errors'])}",
+                str(file_path)
+            )
+
+    @classmethod
+    def validate_go_doc_comment(cls, code: str) -> None:
+        """验证 Go 文档注释符合 godoc 标准
+
+        Args:
+            code: Go 代码
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        # 检查是否有导出函数缺少文档注释
+        export_pattern = r'func ([A-Z][a-zA-Z0-9_]*)\('
+        doc_pattern = r'// \1 [^\n]'
+
+        exports = re.findall(export_pattern, code)
+        for func_name in exports:
+            doc_check = re.search(doc_pattern.replace('\\1', func_name), code)
+            if doc_check is None:
+                raise ValidationError(
+                    f"导出函数 '{func_name}' 缺少文档注释",
+                    "doc_comments"
+                )
+
+    @classmethod
+    def validate_go_error_handling(cls, code: str) -> None:
+        """验证 Go 错误处理符合 Google Go 规范
+
+        Args:
+            code: Go 代码
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        # 检查是否使用字符串比较错误类型
+        string_comparison_pattern = r'err\.Error\(\s*==\s*["\'][^"\']*["\']'
+        matches = re.findall(string_comparison_pattern, code)
+
+        if matches:
+            raise ValidationError(
+                f"发现 {len(matches)} 处使用字符串比较错误类型，应使用 errors.Is() 或 errors.As()",
+                "error_handling"
+            )
+
+        # 检查是否缺少错误包装
+        simple_return_pattern = r'return\s+err\s*$'
+        matches = re.finditer(simple_return_pattern, code, re.MULTILINE)
+
+        for match in matches:
+            line_start = code.rfind('\n', 0, match.start()) + 1
+            line_end = code.find('\n', match.end())
+            line = code[line_start:line_end if line_end != -1 else len(code)]
+
+            # 检查这行是否已经有错误包装
+            if '%w' not in line and 'errors.Is' not in line:
+                raise ValidationError(
+                    f"发现未包装的错误返回，建议使用 fmt.Errorf(\"...: %w\", err)",
+                    "error_handling"
+                )
+
+    # ===== Go 测试规范验证方法 =====
+
+    @classmethod
+    def validate_go_test_bdd_naming(cls, test_name: str) -> None:
+        """验证 Go 测试命名符合 BDD 规范
+
+        Args:
+            test_name: 测试函数名
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        # BDD 命名模式: Test{Function}_Should{Result}_When{Condition}_Given{Precondition}
+        bdd_pattern = r'^Test[A-Z][a-zA-Z0-9_]*_Should[A-Z][a-zA-Z0-9_]*_When[A-Z][a-zA-Z0-9_]*(?:_Given[A-Z][a-zA-Z0-9_]*)?$'
+
+        if not re.match(bdd_pattern, test_name):
+            raise ValidationError(
+                f"测试名 '{test_name}' 不符合 BDD 命名规范，格式应为: TestFunction_ShouldResult_WhenCondition_GivenPrecondition",
+                "test_name"
+            )
+
+    @classmethod
+    def validate_go_test_structure(cls, test_code: str) -> None:
+        """验证 Go 测试代码结构符合最佳实践
+
+        Args:
+            test_code: 测试代码
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        # 检查是否使用 t.Cleanup() 而非 defer
+        if 'defer ' in test_code and 't.Cleanup' not in test_code:
+            # 只在需要清理资源的情况下警告
+            if any(keyword in test_code for keyword in ['Close()', 'Reset()', 'stop()']):
+                raise ValidationError(
+                    "建议使用 t.Cleanup() 替代 defer 进行资源清理",
+                    "test_structure"
+                )
+
+    # ===== 综合验证方法 =====
+
+    @classmethod
+    def validate_go_code_comprehensive(
+        cls,
+        code: str,
+        validate_lsp: bool = True,
+        validate_docs: bool = True,
+        validate_errors: bool = True
+    ) -> List[str]:
+        """综合验证 Go 代码符合所有 Google Go 规范
+
+        Args:
+            code: Go 代码
+            validate_lsp: 是否验证 LSP 友好性
+            validate_docs: 是否验证文档注释
+            validate_errors: 是否验证错误处理
+
+        Returns:
+            List[str]: 验证错误列表
+        """
+        all_errors = []
+
+        if validate_lsp:
+            try:
+                cls.validate_go_code_lsp_friendly(code)
+            except ValidationError as e:
+                all_errors.append(str(e))
+
+        if validate_docs:
+            try:
+                cls.validate_go_doc_comment(code)
+            except ValidationError as e:
+                all_errors.append(str(e))
+
+        if validate_errors:
+            try:
+                cls.validate_go_error_handling(code)
+            except ValidationError as e:
+                all_errors.append(str(e))
+
+        return all_errors
+
+    @classmethod
+    def validate_go_file_comprehensive(
+        cls,
+        file_path: Path,
+        validate_lsp: bool = True,
+        validate_docs: bool = True,
+        validate_errors: bool = True
+    ) -> List[str]:
+        """综合验证 Go 文件符合所有 Google Go 规范
+
+        Args:
+            file_path: 文件路径
+            validate_lsp: 是否验证 LSP 友好性
+            validate_docs: 是否验证文档注释
+            validate_errors: 是否验证错误处理
+
+        Returns:
+            List[str]: 验证错误列表
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                code = f.read()
+
+            return cls.validate_go_code_comprehensive(code, validate_lsp, validate_docs, validate_errors)
+
+        except FileNotFoundError:
+            raise ValidationError(f"文件不存在: {file_path}", "file_path")
+        except Exception as e:
+            raise ValidationError(f"读取文件失败: {str(e)}", "file_path")

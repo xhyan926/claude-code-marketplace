@@ -17,6 +17,18 @@
           "type": "file_content",
           "path": "object_test.go",
           "pattern": "Should_.*_When_.*_Given_"
+        },
+        {
+          "name": "Google Go compliant package name",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "^package\\s+[a-z][a-z0-9_]*$"
+        },
+        {
+          "name": "Uses testify assertions",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "assert\\.(Equal|NoError|NotNil|Contains)"
         }
       ]
     },
@@ -30,6 +42,18 @@
           "type": "file_content",
           "path": "object_test.go",
           "pattern": "httptest.NewServer"
+        },
+        {
+          "name": "Resource cleanup",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "(defer|t.Cleanup)"
+        },
+        {
+          "name": "Google Go error handling",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "%w"
         }
       ]
     },
@@ -43,6 +67,12 @@
           "type": "file_content",
           "path": "object_test.go",
           "pattern": "gomonkey.(ApplyMethod|ApplyFunc)"
+        },
+        {
+          "name": "Mock cleanup",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "defer.*Reset\\(\\)"
         }
       ]
     },
@@ -56,6 +86,18 @@
           "type": "file_content",
           "path": "object_test.go",
           "pattern": "\\[\\].*struct\\{"
+        },
+        {
+          "name": "t.Run for subtests",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "t\\.Run\\("
+        },
+        {
+          "name": "Google Go test isolation",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "t\\.Cleanup\\("
         }
       ]
     },
@@ -71,6 +113,136 @@
           "expected_output": "coverage: 80%"
         }
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "编写包含 Google Go 文档注释的测试",
+      "expected_output": "测试函数包含符合 godoc 标准的文档注释，包括参数、返回值说明。",
+      "assertions": [
+        {
+          "name": "Godoc comments",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "//\\s+[A-Z][^\\n]+\\n+//\\s+参数:"
+        },
+        {
+          "name": "Parameter documentation",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "//\\s+参数:"
+        },
+        {
+          "name": "Return value documentation",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "//\\s+返回值:"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "确保代码符合 LSP 友好规范",
+      "expected_output": "生成的测试代码兼容 gopls，类型定义完整，导入语句规范。",
+      "assertions": [
+        {
+          "name": "LSP compatible imports",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "^import\\s+\\([^)]*\\)"
+        },
+        {
+          "name": "Standard library imports first",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "^import\\s+\\([^)]*\"(?:testing|fmt|errors|time|context)\""
+        },
+        {
+          "name": "Type definitions",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "type\\s+[A-Z][^\\s]*\\s+struct"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "处理边界条件和异常情况",
+      "expected_output": "测试包含边界值（空字符串、最大值、最小值）和异常情况的测试用例。",
+      "assertions": [
+        {
+          "name": "Boundary conditions",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "(empty|\"\"|max|min|zero|null|nil)"
+        },
+        {
+          "name": "Error scenarios",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "assert\\.Error\\("
+        },
+        {
+          "name": "Google Go error checking",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "errors\\.(Is|As)"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "实现资源管理和清理机制",
+      "expected_output": "测试使用 t.Cleanup() 或 defer 确保资源正确清理，避免资源泄漏。",
+      "assertions": [
+        {
+          "name": "Resource cleanup",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "(t\\.Cleanup|defer.*Close)"
+        },
+        {
+          "name": "Multiple cleanup operations",
+          "type": "file_content",
+          "path": "object_test.go",
+          "pattern": "(t\\.Cleanup|defer).*\\)"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "确保通过 go vet 和 gofmt 检查",
+      "expected_output": "运行 go vet 和 gofmt，代码无错误且格式正确。",
+      "assertions": [
+        {
+          "name": "go vet check",
+          "type": "command",
+          "command": "go vet ./...",
+          "expected_output": "no errors"
+        },
+        {
+          "name": "gofmt check",
+          "type": "command",
+          "command": "gofmt -l .",
+          "expected_output": "no formatting changes needed"
+        }
+      ]
     }
-  ]
+  ],
+  "validation_criteria": {
+    "google_go_compliance": {
+      "naming_standards": true,
+      "error_handling": true,
+      "documentation": true,
+      "lsp_friendly": true
+    },
+    "bdd_naming_preservation": {
+      "required": true,
+      "pattern": "Should_ExpectedResult_When_Condition_Given_State"
+    },
+    "quality_metrics": {
+      "test_coverage_min": 80,
+      "lsp_compatibility": 100,
+      "code_formatting": 100
+    }
+  }
 }

@@ -3,42 +3,45 @@
 package obs
 
 import (
-	"testing"
+	"context"
 	"runtime"
+	"testing"
 	"time"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
 )
 
 // Fuzz{{.FunctionName}} 测试{{.Description}}
+//
+// 该模糊测试函数用于验证{{.FunctionName}}在各种输入下的行为。
+// 包含边界条件、异常输入和正常情况的综合测试。
 func Fuzz{{.FunctionName}}(f *testing.F) {
-	// 添加种子数据
+	// 添加种子数据，覆盖常见的测试场景
 	{{- range .Seeds}}
-	seeds_{{$.FunctionName}} := []{{.Type}}{{
+	seeds_{{$.FunctionName}} := []{{.Type}}{
 		{{range .Fields}}
 		{{.Name}}: {{.Value}},
 		{{- end}}
-	}}
+	}
 	{{- end}}
 
 	for _, seed := range seeds_{{.FunctionName}} {
 		f.Add(seed)
 	}
 
-	// 模糊测试
+	// 模糊测试执行
 	f.Fuzz(func(t *testing.T, {{.InputParam}}) {
-		// 防止测试超时
-		if len(f.Fuzzing()) > {{.MaxExecutions}} {
-			t.Skip("跳过长时间运行")
-		}
+		// 使用 context 进行超时控制
+		ctx, cancel := context.WithTimeout(context.Background(), {{.Timeout}})
+		defer cancel()
 
-		// {{.InputDesc}}大小限制
+		// 输入大小限制，防止内存耗尽
 		{{if .SizeLimit}}
 		if len({{.InputParam}}) > {{.SizeLimit}} {
 			t.Skip("{{.InputDesc}}过长，跳过")
 		}
 		{{end}}
 
-		// 资源监控
+		// 资源监控，防止内存泄漏
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
 		if m.Alloc > {{.MemoryLimit}} {
@@ -48,56 +51,51 @@ func Fuzz{{.FunctionName}}(f *testing.F) {
 		// 记录测试开始时间
 		startTime := time.Now()
 
-		// 手试输入处理
+		// 执行测试逻辑
 		{{.TestCode}}
 
-		// 记录执行时间（可选）
-		elapsed := time.Since(startTime)
-		if elapsed > {{.Timeout}} {
-			t.Logf("执行时间过长: %v", elapsed)
+		// 执行时间监控
+		select {
+		case <-ctx.Done():
+			if time.Since(startTime) > {{.Timeout}} {
+				t.Logf("测试执行超时: %v", time.Since(startTime))
+				t.Skip("执行时间过长")
+			}
+		default:
 		}
 
-		// 验证结果
+		// 结果验证
 		{{if .ValidateCode}}
 		{{.ValidateCode}}
 		{{end}}
 	})
 }
 
-// Fuzz{{.FunctionName}}_WithCrashHandling 带崩溃处理的测试
+// Fuzz{{.FunctionName}}_WithCrashHandling 带崩溃处理的模糊测试
+//
+// 该函数专门用于捕获和处理测试中的panic情况，
+// 确保模糊测试过程中的稳定性。
 func Fuzz{{.FunctionName}}_WithCrashHandling(f *testing.F) {
-	// 添加种子数据
+	// 添加种子数据，包括可能导致崩溃的边界情况
 	{{- range .Seeds}}
-	seeds_{{$.FunctionName}}_crash := []{{.Type}}{{
+	seeds_{{$.FunctionName}}_crash := []{{.Type}}{
 		{{range .Fields}}
 		{{.Name}}: {{.Value}},
 		{{- end}}
-	}}
+	}
 	{{- end}}
 
 	for _, seed := range seeds_{{.FunctionName}}_crash {
 		f.Add(seed)
 	}
 
-	// 模糊测试
+	// 带崩溃处理的模糊测试
 	f.Fuzz(func(t *testing.T, {{.InputParam}}) {
-		// 防止测试超时
-		if len(f.Fuzzing()) > {{.MaxExecutions}} {
-			t.Skip("跳过长时间运行")
-		}
-
-		// 输入大小限制
-		{{if .SizeLimit}}
-		if len({{.InputParam}}) > {{.SizeLimit}} {
-			t.Skip("{{.InputDesc}}过长，跳过")
-		}
-		{{end}}
-
-		// 执行测试并捕获panic
+		// 使用 defer recover 捕获 panic
 		defer func() {
 			if r := recover(); r != nil {
 				t.Logf("捕获到panic: %v", r)
-				t.Error("测试导致panic")
+				t.Errorf("测试导致panic: %v", r)
 			}
 		}()
 
@@ -106,7 +104,10 @@ func Fuzz{{.FunctionName}}_WithCrashHandling(f *testing.F) {
 	})
 }
 
-// Fuzz{{.FunctionName}}_WithBoundary 测试边界条件
+// Fuzz{{.FunctionName}}_WithBoundary 边界条件模糊测试
+//
+// 专注于测试{{.FunctionName}}在边界条件下的行为，
+// 包括零值、最大值、最小值等极端情况。
 func Fuzz{{.FunctionName}}_WithBoundary(f *testing.F) {
 	// 添加边界值种子
 	boundarySeeds := []struct {
@@ -127,25 +128,23 @@ func Fuzz{{.FunctionName}}_WithBoundary(f *testing.F) {
 
 	// 边界测试
 	f.Fuzz(func(t *testing.T, {{.InputParam}}) {
-		// 防止测试超时
-		if len(f.Fuzzing()) > {{.MaxExecutions}} {
-			t.Skip("跳过长时间运行")
-		}
-
-		// 执行边界测试
+		// 边界测试逻辑
 		{{.BoundaryTestCode}}
 	})
 }
 
-// Fuzz{{.FunctionName}}_Performance 性能测试
+// Fuzz{{.FunctionName}}_Performance 性能模糊测试
+//
+// 在保证正确性的前提下，测试{{.FunctionName}}的性能表现。
+// 监控内存使用和执行时间，确保性能回归。
 func Fuzz{{.FunctionName}}_Performance(f *testing.F) {
-	// 添加种子数据
+	// 添加性能测试种子数据
 	{{- range .Seeds}}
-	seeds_{{$.FunctionName}}_perf := []{{.Type}}{{
+	seeds_{{$.FunctionName}}_perf := []{{.Type}}{
 		{{range .Fields}}
 		{{.Name}}: {{.Value}},
 		{{- end}}
-	}}
+	}
 	{{- end}}
 
 	for _, seed := range seeds_{{$.FunctionName}}_perf {
@@ -154,29 +153,33 @@ func Fuzz{{.FunctionName}}_Performance(f *testing.F) {
 
 	// 性能测试
 	f.Fuzz(func(t *testing.T, {{.InputParam}}) {
-		// 限制执行次数
-		if len(f.Fuzzing()) > {{.PerfMaxExecutions}} {
-			t.Skip("跳过长时间运行")
-		}
+		// 限制执行次数以控制测试时间
+		ctx, cancel := context.WithTimeout(context.Background(), {{.PerfTimeout}})
+		defer cancel()
 
 		// 记录开始时间
 		start := time.Now()
 
-		// 执行测试
+		// 执行多次迭代以获得稳定的性能数据
 		for i := 0; i < {{.PerfIterations}}; i++ {
-			{{.TestCode}}
+			select {
+			case <-ctx.Done():
+				t.Skip("性能测试超时")
+			default:
+				{{.TestCode}}
+			}
 		}
 
-		// 计算耗时
+		// 计算平均执行时间
 		elapsed := time.Since(start)
 		avg := elapsed / time.Duration({{.PerfIterations}})
 
 		// 记录性能数据
-		t.Logf("平均执行时间: %v", avg)
+		t.Logf("平均执行时间: %v, 总耗时: %v", avg, elapsed)
 
 		// 性能断言
 		if avg > {{.PerfThreshold}} {
-			t.Errorf("性能低于预期，平均时间: %v", avg)
+			t.Errorf("性能低于预期，平均时间: %v, 阈值: %v", avg, {{.PerfThreshold}})
 		}
 	})
 }

@@ -11,6 +11,7 @@ from typing import Dict, Any
 
 class ErrorCodes:
     """错误码类"""
+    """错误码类"""
 
     # 错误码范围
     SKILL_ERROR_BASE = 1000
@@ -117,3 +118,28 @@ class ErrorCodes:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(error_codes, f, indent=2, ensure_ascii=False)
+
+# 创建 ERROR_CODES 常量以保持向后兼容
+ERROR_CODES = {
+    'SKILL_ERROR': ErrorCodes.SKILL_ERROR,
+    'VALIDATION_ERROR': ErrorCodes.VALIDATION_ERROR,
+    'INVALID_INPUT_ERROR': ErrorCodes.INVALID_INPUT_ERROR,
+    'MISSING_REQUIRED_FIELD_ERROR': ErrorCodes.MISSING_REQUIRED_FIELD_ERROR,
+    'TEMPLATE_ERROR': ErrorCodes.TEMPLATE_ERROR,
+    'TEMPLATE_SYNTAX_ERROR': ErrorCodes.TEMPLATE_SYNTAX_ERROR,
+    'TEMPLATE_NOT_FOUND_ERROR': ErrorCodes.TEMPLATE_NOT_FOUND_ERROR,
+    'TEMPLATE_RENDER_ERROR': ErrorCodes.TEMPLATE_RENDER_ERROR,
+    'FILESYSTEM_ERROR': ErrorCodes.FILESYSTEM_ERROR,
+    'FILE_NOT_FOUND_ERROR': ErrorCodes.FILE_NOT_FOUND_ERROR,
+    'FILE_WRITE_ERROR': ErrorCodes.FILE_WRITE_ERROR,
+    'DIRECTORY_NOT_FOUND_ERROR': ErrorCodes.DIRECTORY_NOT_FOUND_ERROR,
+    'DIRECTORY_CREATE_ERROR': ErrorCodes.DIRECTORY_CREATE_ERROR,
+    'PERMISSION_ERROR': ErrorCodes.PERMISSION_ERROR,
+    'DEPENDENCY_ERROR': ErrorCodes.DEPENDENCY_ERROR,
+    'DEPENDENCY_NOT_FOUND_ERROR': ErrorCodes.DEPENDENCY_NOT_FOUND_ERROR,
+    'DEPENDENCY_VERSION_MISMATCH': ErrorCodes.DEPENDENCY_VERSION_MISMATCH,
+    'SKILL_EXECUTION_ERROR': ErrorCodes.SKILL_EXECUTION_ERROR,
+    'CONFIG_ERROR': ErrorCodes.CONFIG_ERROR,
+    'TIMEOUT_ERROR': ErrorCodes.TIMEOUT_ERROR,
+    'EXECUTION_FAILED_ERROR': ErrorCodes.EXECUTION_FAILED_ERROR,
+}

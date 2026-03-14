@@ -3,15 +3,20 @@
 package e2e
 
 import (
-	"testing"
+	"context"
 	"fmt"
+	"sync"
+	"testing"
 	"time"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs/test/integration"
 )
 
-// {{.TestName}} 测试描述
+// {{.TestName}} 测试{{.Description}}
+//
+// 端到端集成测试，验证{{.TestName}}在真实OBS环境中的行为。
+// 包含完整的API调用、错误处理和资源清理。
 func {{.TestName}}(t *testing.T) {
 	// 创建集成测试客户端
 	client := integration.NewTestClient(t)
@@ -22,7 +27,7 @@ func {{.TestName}}(t *testing.T) {
 	t.Logf("使用测试桶: %s", bucket)
 
 	// 测试场景开始
-	t.Run("场景描述", func(t *testing.T) {
+	t.Run("正常流程", func(t *testing.T) {
 		// 准备测试数据
 		objectKey := client.GetTestObjectKey("test-{{.Suffix}}.txt")
 		content := "这是{{.TestName}}的测试内容。"
@@ -36,17 +41,22 @@ func {{.TestName}}(t *testing.T) {
 		// 验证结果
 		t.Logf("操作成功: %s", objectKey)
 
-		// 注册清理函数（可选）
+		// 使用 Cleanup 进行资源清理
 		client.AddCleanup(func(t *testing.T) {
 			err := client.TestClient().DeleteObject(bucket, objectKey)
 			if err != nil {
 				t.Logf("清理失败: %v", err)
+			} else {
+				t.Logf("清理成功: %s", objectKey)
 			}
 		})
 	})
 }
 
 // {{.TestName}}_WithMock 使用Mock服务器的测试
+//
+// 使用Mock服务器进行集成测试，无需真实OBS环境。
+// 适合在隔离环境中测试特定场景。
 func {{.TestName}}_WithMock(t *testing.T) {
 	// 创建Mock服务器
 	mockServer := integration.NewMockServer()
@@ -61,64 +71,422 @@ func {{.TestName}}_WithMock(t *testing.T) {
 	client := integration.NewTestClientWithEndpoint(t, mockEndpoint)
 	defer client.Cleanup(t)
 
-	// 执行测试...
+	t.Run("Mock环境测试", func(t *testing.T) {
+		// 执行测试...
+		bucket := client.GetTestBucket()
+		objectKey := client.GetTestObjectKey("mock-test.txt")
+		content := "Mock服务器测试内容"
+
+		err := client.TestClient().PutObject(bucket, objectKey, content, nil)
+		if err != nil {
+			t.Fatalf("Mock测试失败: %v", err)
+		}
+
+		t.Logf("Mock测试成功")
+	})
 }
 
-// {{.TestName}}_Concurrent 并发测试
+// {{.TestName}}_Concurrent 并发集成测试
+//
+// 测试{{.TestName}}在并发场景下的行为。
+// 验证并发安全性和资源管理。
 func {{.TestName}}_Concurrent(t *testing.T) {
 	client := integration.NewTestClient(t)
 	defer client.Cleanup(t)
 
 	bucket := client.GetTestBucket()
 
-	var wg sync.WaitGroup
-	errChan := make(chan error, 10)
+	t.Run("并发操作测试", func(t *testing.T) {
+		const concurrency = 10
+		var wg sync.WaitGroup
+		errChan := make(chan error, concurrency)
 
-	// 并发执行测试操作
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
+		// 并发执行测试操作
+		for i := 0; i < concurrency; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
 
-			objectKey := client.GetTestObjectKey(fmt.Sprintf("concurrent-%d.txt", id))
-			content := fmt.Sprintf("并发测试内容 %d", id)
+				objectKey := client.GetTestObjectKey(fmt.Sprintf("concurrent-%d.txt", id))
+				content := fmt.Sprintf("并发测试内容 %d", id)
 
-			err := client.TestClient().PutObject(bucket, objectKey, content, nil)
-			if err != nil {
-				errChan <- fmt.Errorf("并发 %d 失败: %v", id, err)
-			}
-		}(i)
-	}
+				// 执行操作
+				err := client.TestClient().PutObject(bucket, objectKey, content, nil)
+				if err != nil {
+					errChan <- fmt.Errorf("并发 %d 失败: %w", id, err)
+					return
+				}
 
-	wg.Wait()
-	close(errChan)
+				// 注册清理函数
+				client.AddCleanup(func(t *testing.T) {
+					delErr := client.TestClient().DeleteObject(bucket, objectKey)
+					if delErr != nil {
+						t.Logf("清理并发 %d 失败: %v", id, delErr)
+					}
+				})
+			}(i)
+		}
 
-	// 收集错误
-	for err := range errChan {
-		t.Error(err)
-	}
+		// 等待所有操作完成
+		wg.Wait()
+		close(errChan)
+
+		// 收集错误
+		errorCount := 0
+		for err := range errChan {
+			t.Error(err)
+			errorCount++
+		}
+
+		t.Logf("并发测试完成: 总数=%d, 错误=%d", concurrency, errorCount)
+	})
 }
 
-// {{.TestName}}_WithTimeout 带超时的测试
+// {{.TestName}}_WithTimeout 带超时的集成测试
+//
+// 测试{{.TestName}}的超时处理能力。
+// 确保长时间操作能正确处理超时场景。
 func {{.TestName}}_WithTimeout(t *testing.T) {
 	client := integration.NewTestClient(t)
 	defer client.Cleanup(t)
 
-	// 创建带超时的context
-	ctx, cancel := client.WithContext(30 * time.Second)
-	defer cancel()
+	t.Run("超时处理测试", func(t *testing.T) {
+		// 创建带超时的context
+		ctx, cancel := client.WithContext(30*time.Second)
+		defer cancel()
 
-	// 使用context执行长时间操作
-	bucket := client.GetTestBucket()
-	objectKey := client.GetTestObjectKey("timeout-test.txt")
-	content := "带超时的测试内容。"
+		bucket := client.GetTestBucket()
+		objectKey := client.GetTestObjectKey("timeout-test.txt")
+		content := "带超时的测试内容"
 
-	// 执行操作（这里需要根据实际情况修改）
-	err := client.TestClient().PutObject(bucket, objectKey, content, nil)
-	if err != nil {
-		t.Fatalf("操作失败: %v", err)
+		// 使用context执行长时间操作
+		err := client.TestClient().PutObject(bucket, objectKey, content, nil)
+		if err != nil {
+			t.Fatalf("操作失败: %v", err)
+		}
+
+		// 验证操作结果
+		t.Logf("操作成功完成")
+
+		// 清理测试数据
+		client.AddCleanup(func(t *testing.T) {
+			delErr := client.TestClient().DeleteObject(bucket, objectKey)
+			if delErr != nil {
+				t.Logf("清理失败: %v", delErr)
+			}
+		})
+	})
+}
+
+// {{.TestName}}_WithRetry 带重试机制的集成测试
+//
+// 测试{{.TestName}}在重试场景下的行为。
+// 验证重试逻辑和最终一致性。
+func {{.TestName}}_WithRetry(t *testing.T) {
+	client := integration.NewTestClient(t)
+	defer client.Cleanup(t)
+
+	t.Run("重试机制测试", func(t *testing.T) {
+		const maxRetries = 3
+		const retryDelay = 100 * time.Millisecond
+
+		bucket := client.GetTestBucket()
+		objectKey := client.GetTestObjectKey("retry-test.txt")
+		content := "带重试的测试内容"
+
+		var lastErr error
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			t.Logf("尝试 %d/%d", attempt, maxRetries)
+
+			err := client.TestClient().PutObject(bucket, objectKey, content, nil)
+			if err == nil {
+				t.Logf("操作成功，尝试次数: %d", attempt)
+
+				// 注册清理函数
+				client.AddCleanup(func(t *testing.T) {
+					delErr := client.TestClient().DeleteObject(bucket, objectKey)
+					if delErr != nil {
+						t.Logf("清理失败: %v", delErr)
+					}
+				})
+
+				return // 成功，退出重试循环
+			}
+
+			lastErr = err
+			t.Logf("尝试 %d 失败: %v", attempt, err)
+
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+			}
+		}
+
+		// 所有重试都失败
+		t.Fatalf("重试 %d 次后仍然失败: %v", maxRetries, lastErr)
+	})
+}
+
+// {{.TestName}}_WithLargeData 大数据集成测试
+//
+// 测试{{.TestName}}处理大数据的能力。
+// 验证内存使用、性能和正确性。
+func {{.TestName}}_WithLargeData(t *testing.T) {
+	client := integration.NewTestClient(t)
+	defer client.Cleanup(t)
+
+	t.Run("大数据处理测试", func(t *testing.T) {
+		const dataSize = 10 * 1024 * 1024 // 10MB
+
+		bucket := client.GetTestBucket()
+		objectKey := client.GetTestObjectKey("large-data-test.txt")
+
+		// 准备测试数据
+		t.Log("准备大数据测试数据...")
+		content := make([]byte, dataSize)
+		for i := range content {
+			content[i] = byte(i % 256)
+		}
+
+		// 执行大数据操作
+		t.Log("开始大数据操作...")
+		startTime := time.Now()
+
+		err := client.TestClient().PutObject(bucket, objectKey, string(content), nil)
+		if err != nil {
+			t.Fatalf("大数据操作失败: %v", err)
+		}
+
+		elapsed := time.Since(startTime)
+		t.Logf("大数据操作完成，耗时: %v", elapsed)
+
+		// 清理大数据测试数据
+		client.AddCleanup(func(t *testing.T) {
+			t.Log("清理大数据测试数据...")
+			delErr := client.TestClient().DeleteObject(bucket, objectKey)
+			if delErr != nil {
+				t.Logf("清理大数据失败: %v", delErr)
+			} else {
+				t.Logf("大数据清理成功，耗时: %v", time.Since(startTime))
+			}
+		})
+	})
+}
+
+// {{.TestName}}_WithCleanup 资源清理集成测试
+//
+// 专门测试{{.TestName}}的资源清理能力。
+// 确保所有创建的资源都能被正确清理。
+func {{.TestName}}_WithCleanup(t *testing.T) {
+	client := integration.NewTestClient(t)
+
+	t.Run("资源清理测试", func(t *testing.T) {
+		bucket := client.GetTestBucket()
+		createdObjects := []string{}
+
+		// 创建多个测试对象
+		for i := 0; i < 5; i++ {
+			objectKey := client.GetTestObjectKey(fmt.Sprintf("cleanup-test-%d.txt", i))
+			content := fmt.Sprintf("清理测试内容 %d", i)
+
+			err := client.TestClient().PutObject(bucket, objectKey, content, nil)
+			if err != nil {
+				t.Fatalf("创建对象 %s 失败: %v", objectKey, err)
+			}
+
+			createdObjects = append(createdObjects, objectKey)
+			t.Logf("创建对象: %s", objectKey)
+		}
+
+		// 注册清理函数
+		client.Cleanup(t)
+
+		// 验证清理效果
+		t.Log("验证资源清理...")
+		for _, objectKey := range createdObjects {
+			// 尝试删除（应该已经被清理）
+			err := client.TestClient().DeleteObject(bucket, objectKey)
+			if err == nil {
+				t.Logf("对象 %s 清理成功", objectKey)
+			} else {
+				t.Logf("对象 %s 可能已不存在: %v", objectKey, err)
+			}
+		}
+
+		t.Log("资源清理测试完成")
+	})
+}
+
+// {{.TestName}}_WithContext 使用Context的集成测试
+//
+// 测试{{.TestName}}与Context的集成。
+// 验证取消、超时等Context功能。
+func {{.TestName}}_WithContext(t *testing.T) {
+	client := integration.NewTestClient(t)
+	defer client.Cleanup(t)
+
+	t.Run("Context集成测试", func(t *testing.T) {
+		// 测试context取消
+		t.Run("取消测试", func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+
+			bucket := client.GetTestBucket()
+			objectKey := client.GetTestObjectKey("cancel-test.txt")
+			content := "Context取消测试内容"
+
+			// 在另一个goroutine中取消context
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				cancel()
+			}()
+
+			// 执行操作（应该被取消）
+			err := client.TestClient().PutObjectWithContext(ctx, bucket, objectKey, content, nil)
+			if err == nil {
+				t.Error("期望操作被取消，但操作成功")
+			} else {
+				t.Logf("操作被正确取消: %v", err)
+			}
+		})
+
+		// 测试context超时
+		t.Run("超时测试", func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			defer cancel()
+
+			bucket := client.GetTestBucket()
+			objectKey := client.GetTestObjectKey("timeout-context-test.txt")
+			content := "Context超时测试内容"
+
+			// 执行操作（应该超时）
+			err := client.TestClient().PutObjectWithContext(ctx, bucket, objectKey, content, nil)
+			if err == nil {
+				t.Error("期望操作超时，但操作成功")
+			} else {
+				t.Logf("操作正确超时: %v", err)
+			}
+		})
+	})
+}
+
+// {{.TestName}}_ErrorHandling 错误处理集成测试
+//
+// 专门测试{{.TestName}}的错误处理能力。
+// 验证各种错误场景的正确处理。
+func {{.TestName}}_ErrorHandling(t *testing.T) {
+	client := integration.NewTestClient(t)
+	defer client.Cleanup(t)
+
+	t.Run("错误处理测试", func(t *testing.T) {
+		bucket := client.GetTestBucket()
+
+		// 测试无效bucket
+		t.Run("无效Bucket", func(t *testing.T) {
+			invalidBucket := "nonexistent-bucket-12345"
+			objectKey := client.GetTestObjectKey("error-test.txt")
+			content := "错误处理测试内容"
+
+			err := client.TestClient().PutObject(invalidBucket, objectKey, content, nil)
+			if err == nil {
+				t.Error("期望返回错误，但操作成功")
+			} else {
+				t.Logf("正确返回错误: %v", err)
+			}
+		})
+
+		// 测试无效对象key
+		t.Run("无效对象Key", func(t *testing.T) {
+			invalidKey := "" // 空key
+			content := "错误处理测试内容"
+
+			err := client.TestClient().PutObject(bucket, invalidKey, content, nil)
+			if err == nil {
+				t.Error("期望返回错误，但操作成功")
+			} else {
+				t.Logf("正确返回错误: %v", err)
+			}
+		})
+
+		// 测试权限错误
+		t.Run("权限错误", func(t *testing.T) {
+			// 这个测试需要根据实际情况配置
+			// 测试没有权限访问的bucket
+			t.Skip("权限错误测试需要特殊配置")
+		})
+	})
+}
+
+// integrationTestStats 集成测试统计
+type integrationTestStats struct {
+	totalTests      int
+	passedTests     int
+	failedTests     int
+	totalTime       time.Duration
+	memoryUsage     int64
+	operationsCount int
+}
+
+// collectTestStats 收集测试统计信息
+func collectTestStats(t *testing.T) integrationTestStats {
+	stats := integrationTestStats{
+		totalTests: len(t.Tests()),
+		totalTime:   time.Since(t.StartTime()),
 	}
 
-	// 验证操作结果
-	t.Logf("操作成功完成")
+	// 这里需要根据实际的测试框架实现
+	// 获取内存使用、通过/失败测试数等信息
+
+	return stats
+}
+
+// logIntegrationTestReport 输出集成测试报告
+func logIntegrationTestReport(t *testing.T, stats integrationTestStats) {
+	t.Logf("=== 集成测试报告 ===")
+	t.Logf("总测试数: %d", stats.totalTests)
+	t.Logf("通过测试: %d", stats.passedTests)
+	t.Logf("失败测试: %d", stats.failedTests)
+	t.Logf("通过率: %.1f%%", float64(stats.passedTests)/float64(stats.totalTests)*100)
+	t.Logf("总耗时: %v", stats.totalTime)
+	t.Logf("内存使用: %d MB", stats.memoryUsage/1024/1024)
+	t.Logf("操作总数: %d", stats.operationsCount)
+	if stats.operationsCount > 0 {
+		avgOpTime := float64(stats.totalTime) / float64(stats.operationsCount)
+		t.Logf("平均操作时间: %.2f ms", avgOpTime/float64(time.Millisecond))
+	}
+}
+
+// setupTestEnvironment 设置测试环境
+//
+// 参数:
+//   t: 测试对象
+//   cleanup: 清理函数
+//
+// 返回值:
+//   context: 测试context
+//   cancel: 取消函数
+func setupTestEnvironment(t *testing.T, cleanup func(*testing.T)) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+
+	t.Cleanup(func() {
+		cancel()
+		if cleanup != nil {
+			cleanup(t)
+		}
+	})
+
+	return ctx, cancel
+}
+
+// verifyTestResult 验证测试结果
+//
+// 参数:
+//   t: 测试对象
+//   result: 操作结果
+//   expected: 期望结果
+//   description: 验证描述
+func verifyTestResult(t *testing.T, result interface{}, expected interface{}, description string) {
+	if result != expected {
+		t.Errorf("%s: 期望 %v, 实际 %v", description, expected, result)
+	} else {
+		t.Logf("%s: 验证通过 %v", description, result)
+	}
 }

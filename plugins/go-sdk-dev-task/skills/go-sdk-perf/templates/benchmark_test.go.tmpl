@@ -4,20 +4,28 @@ package obs
 
 import (
 	"bytes"
-	"testing"
+	"context"
 	"fmt"
-	"time"
-	"sync"
 	"runtime"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs/test/config"
 )
 
 // BenchmarkLight_{{.TestName}}_{{.Scenario}} 轻量级性能测试 - {{.Description}}
+//
+// 用于测试{{.TestName}}在正常负载下的性能表现。
+// 适合快速验证基本功能性能，不需要大量资源。
 func BenchmarkLight_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	// 创建测试客户端
 	cfg := config.LoadTestConfig()
-	obsClient, _ := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
 	defer obsClient.Close()
 
 	// {{.Description}}
@@ -40,10 +48,16 @@ func BenchmarkLight_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 }
 
 // BenchmarkDeep_{{.TestName}}_{{.Scenario}} 深度性能测试 - {{.Description}}
+//
+// 用于测试{{.TestName}}在复杂场景下的性能表现。
+// 模拟真实使用环境中的复杂负载情况。
 func BenchmarkDeep_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	// 创建测试客户端
 	cfg := config.LoadTestConfig()
-	obsClient, _ := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
 	defer obsClient.Close()
 
 	// {{.Description}}
@@ -58,10 +72,16 @@ func BenchmarkDeep_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 }
 
 // BenchmarkConcurrent_{{.TestName}}_{{.Scenario}} 并发性能测试 - {{.Description}}
+//
+// 用于测试{{.TestName}}在并发场景下的性能表现。
+// 测试不同并发级别下的并发安全性和性能。
 func BenchmarkConcurrent_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	// 创建测试客户端
 	cfg := config.LoadTestConfig()
-	obsClient, _ := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
 	defer obsClient.Close()
 
 	// {{.Description}}
@@ -87,10 +107,16 @@ func BenchmarkConcurrent_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 }
 
 // BenchmarkMemory_{{.TestName}}_{{.Scenario}} 内存性能测试 - {{.Description}}
+//
+// 用于测试{{.TestName}}的内存使用情况。
+// 监控内存分配和GC压力，确保没有内存泄漏。
 func BenchmarkMemory_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	// 创建测试客户端
 	cfg := config.LoadTestConfig()
-	obsClient, _ := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
 	defer obsClient.Close()
 
 	// {{.Description}}
@@ -113,17 +139,31 @@ func BenchmarkMemory_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 			memDelta := m.Alloc - memBefore
 
 			if memDelta > 0 {
-				b.Logf("内存分配: %d bytes", memDelta)
+				b.Logf("单次操作内存分配: %d bytes", memDelta)
 			}
 		}
 	})
+
+	// 最终内存统计
+	runtime.ReadMemStats(&m)
+	b.Logf("=== 内存使用统计 ===")
+	b.Logf("总分配内存: %d MB", m.TotalAlloc/1024/1024)
+	b.Logf("当前使用内存: %d MB", m.Alloc/1024/1024)
+	b.Logf("GC次数: %d", m.NumGC)
+	b.Logf("内存分配次数: %d", m.Mallocs)
 }
 
 // BenchmarkResource_{{.TestName}}_{{.Scenario}} 资源监控测试 - {{.Description}}
+//
+// 用于全面监控{{.TestName}}的资源使用情况。
+// 包括CPU、内存、GC等性能指标的综合监控。
 func BenchmarkResource_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	// 创建测试客户端
 	cfg := config.LoadTestConfig()
-	obsClient, _ := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
 	defer obsClient.Close()
 
 	// {{.Description}}
@@ -132,7 +172,7 @@ func BenchmarkResource_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	{{end}}
 
 	var m runtime.MemStats
-	var cpuUsage float64
+	var totalOpTime time.Duration
 	var totalGC uint32
 	startTime := time.Now()
 
@@ -144,16 +184,17 @@ func BenchmarkResource_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 		// 执行测试
 		{{.TestCode}}
 
-		// 记录性能数据
+		// 记录操作时间
 		opDuration := time.Since(opStart)
+		totalOpTime += opDuration
 
 		// 记录资源使用
 		runtime.ReadMemStats(&m)
-		totalGC += m.NumGC - totalGC
+		totalGC += m.NumGC
 
 		// 每100次操作记录一次统计
 		if i%100 == 0 {
-			cpuUsage = float64(opDuration) / float64(time.Millisecond)
+			avgTime := float64(opDuration) / float64(time.Millisecond)
 			b.Logf("操作 %d: 时间=%v, 内存=%d MB, GC=%d",
 				i, opDuration, m.Alloc/1024/1024, totalGC)
 		}
@@ -167,16 +208,24 @@ func BenchmarkResource_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	b.Logf("总操作数: %d", b.N)
 	b.Logf("总时间: %v", elapsed)
 	b.Logf("平均操作时间: %.2f ms", avgOpTime)
+	b.Logf("总操作时间: %v", totalOpTime)
 	b.Logf("最大内存使用: %d MB", m.Alloc/1024/1024)
+	b.Logf("总分配内存: %d MB", m.TotalAlloc/1024/1024)
 	b.Logf("GC次数: %d", totalGC)
-	b.Logf("CPU使用率: %.2f%%", cpuUsage)
+	b.Logf("平均GC间隔: %.2f ms", float64(elapsed)/float64(totalGC)/float64(time.Millisecond))
 }
 
 // BenchmarkRegression_{{.TestName}}_{{.Scenario}} 性能回归测试 - {{.Description}}
+//
+// 用于检测{{.TestName}}是否存在性能退化。
+// 与历史基线对比，确保性能没有明显下降。
 func BenchmarkRegression_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	// 创建测试客户端
 	cfg := config.LoadTestConfig()
-	obsClient, _ := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
 	defer obsClient.Close()
 
 	// {{.Description}}
@@ -197,10 +246,55 @@ func BenchmarkRegression_{{.TestName}}_{{.Scenario}}(b *testing.B) {
 	{{end}}
 }
 
+// BenchmarkScalability_{{.TestName}}_{{.Scenario}} 可扩展性测试 - {{.Description}}
+//
+// 用于测试{{.TestName}}在不同规模下的可扩展性。
+// 测试从单数据到大数据集的性能表现。
+func BenchmarkScalability_{{.TestName}}_{{.Scenario}}(b *testing.B) {
+	// 创建测试客户端
+	cfg := config.LoadTestConfig()
+	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
+	if err != nil {
+		b.Fatalf("创建OBS客户端失败: %v", err)
+	}
+	defer obsClient.Close()
+
+	// 测试不同数据规模
+	dataSizes := []struct {
+		name string
+		size int
+	}{
+		{"Small-1KB", 1024},
+		{"Medium-100KB", 100 * 1024},
+		{"Large-10MB", 10 * 1024 * 1024},
+	}
+
+	for _, dataSize := range dataSizes {
+		b.Run(dataSize.name, func(b *testing.B) {
+			// 创建测试数据
+			testData := bytes.Repeat([]byte("x"), dataSize.size)
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				// 使用测试数据执行操作
+				{{.TestCode}}
+			}
+
+			// 计算吞吐量
+			totalData := int64(b.N) * int64(dataSize.size)
+			totalTime := b.T.Seconds()
+			throughput := float64(totalData) / totalTime / (1024 * 1024)
+
+			b.Logf("数据规模: %s, 吞吐量: %.2f MB/s", dataSize.name, throughput)
+		})
+	}
+}
+
 // 性能基准配置
 var performanceBaseline = map[string]float64{
 	{{range .Baselines}}
-	"{{.Name}}": {{.Value}},{{end}}
+	"{{.Name}}": {{.Value}},
+	{{end}}
 }
 
 // 性能退化阈值
@@ -209,14 +303,25 @@ const performanceThreshold = 0.9 // 90%
 // checkPerformanceDegradation 检查性能退化
 func checkPerformanceDegradation(b *testing.B, testName string, currentValue float64) {
 	if baseline, exists := performanceBaseline[testName]; exists {
-		if currentValue < baseline*performanceThreshold {
-			b.Errorf("性能退化检测失败! 当前: %.2f, 基线: %.2f (阈值: %.1f%%)",
-				currentValue, baseline, performanceThreshold*100)
+		degradation := currentValue / baseline
+		if degradation < performanceThreshold {
+			b.Errorf("检测到性能退化! 当前: %.2f, 基线: %.2f, 退化: %.1f%%",
+				currentValue, baseline, (1-degradation)*100)
+		} else {
+			b.Logf("性能检查通过: 当前: %.2f, 基线: %.2f",
+				currentValue, baseline)
 		}
 	}
 }
 
 // calculateThroughput 计算吞吐量 (MB/s)
+//
+// 参数:
+//   result: 基准测试结果
+//   fileSizeMB: 文件大小（MB）
+//
+// 返回值:
+//   float64: 吞吐量（MB/s）
 func calculateThroughput(result testing.BenchmarkResult, fileSizeMB float64) float64 {
 	if result.N <= 0 || result.T <= 0 {
 		return 0
@@ -236,6 +341,12 @@ func calculateThroughput(result testing.BenchmarkResult, fileSizeMB float64) flo
 }
 
 // calculateLatency 计算延迟 (ms)
+//
+// 参数:
+//   result: 基准测试结果
+//
+// 返回值:
+//   float64: 平均延迟（毫秒）
 func calculateLatency(result testing.BenchmarkResult) float64 {
 	if result.N <= 0 {
 		return 0
@@ -248,20 +359,114 @@ func calculateLatency(result testing.BenchmarkResult) float64 {
 	return avgLatencyNs / float64(time.Millisecond)
 }
 
-// generatePerfReport 生成性能报告
+// calculateMemoryEfficiency 计算内存效率
+//
+// 参数:
+//   result: 基准测试结果
+//   dataSize: 数据大小（字节）
+//
+// 返回值:
+//   float64: 内存效率（数据量/内存分配量）
+func calculateMemoryEfficiency(result testing.BenchmarkResult, dataSize int64) float64 {
+	if result.AllocsPerOp <= 0 || result.MemBytes <= 0 {
+		return 0
+	}
+
+	totalData := int64(result.N) * dataSize
+	memoryUsed := int64(result.MemBytes) * int64(result.AllocsPerOp)
+
+	if memoryUsed <= 0 {
+		return 0
+	}
+
+	return float64(totalData) / float64(memoryUsed)
+}
+
+// generatePerfReport 生成详细的性能报告
+//
+// 参数:
+//   b: 基准测试对象
+//   testName: 测试名称
+//   result: 基准测试结果
+//   fileSizeMB: 文件大小（MB）
 func generatePerfReport(b *testing.B, testName string, result testing.BenchmarkResult, fileSizeMB float64) {
 	throughput := calculateThroughput(result, fileSizeMB)
 	latency := calculateLatency(result)
 
-	// 检查性能退化
-	checkPerformanceDegradation(b, testName, throughput)
-
-	b.Logf("=== 性能报告 ===")
-	b.Logf("测试名称: %s", testName)
+	b.Logf("=== 性能报告: %s ===", testName)
 	b.Logf("操作次数: %d", result.N)
 	b.Logf("总时间: %v", result.T)
+	b.Logf("每次操作时间: %.2f ns/op", float64(result.T)/float64(result.N)/float64(time.Nanosecond))
 	b.Logf("吞吐量: %.2f MB/s", throughput)
 	b.Logf("平均延迟: %.2f ms", latency)
 	b.Logf("内存分配: %d bytes/op", result.MemBytes)
 	b.Logf("内存分配次数: %d allocs/op", result.AllocsPerOp)
+
+	// 性能退化检查
+	checkPerformanceDegradation(b, testName, throughput)
+}
+
+// concurrentOperationStats 并发操作统计
+type concurrentOperationStats struct {
+	operations      int64
+	totalTime      time.Duration
+	errors         int64
+	memoryAllocated int64
+}
+
+// runConcurrentOperations 运行并发操作并收集统计信息
+func runConcurrentOperations(ctx context.Context, concurrency int, operation func()) concurrentOperationStats {
+	stats := concurrentOperationStats{}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	// 设置超时
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	// 启动并发协程
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					startTime := time.Now()
+
+					func() {
+						defer func() {
+							if r := recover(); r != nil {
+								mu.Lock()
+								stats.errors++
+								mu.Unlock()
+							}
+						}()
+
+						operation()
+					}()
+
+					duration := time.Since(startTime)
+
+					mu.Lock()
+					stats.operations++
+					stats.totalTime += duration
+					mu.Unlock()
+				}
+			}
+		}()
+	}
+
+	// 等待所有协程完成
+	wg.Wait()
+
+	// 记录内存统计
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	stats.memoryAllocated = int64(m.Alloc)
+
+	return stats
 }
