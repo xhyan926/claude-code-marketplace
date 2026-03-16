@@ -32,6 +32,19 @@ Go SDK 开发技能通用框架，提供以下核心功能：
 ### retry.py
 重试机制，支持指数退避策略。
 
+### subagent_manager.py
+Subagent 管理器，提供 Subagent 的生命周期管理、消息路由和状态同步功能。
+用于实现并行执行和深度代码研究。
+
+### message_protocol.py
+消息传递协议，定义 Subagent 之间的消息数据结构和通信机制。
+
+### subagent_examples.py
+Subagent 使用示例代码，展示各种常见使用场景。
+
+### SUBAGENT_README.md
+Subagent 基础设施的详细使用文档，包含 API 参考和最佳实践。
+
 ## 使用示例
 
 ### 创建新技能
@@ -72,7 +85,47 @@ except SkillError as e:
     error_handler.handle(e)
 ```
 
+### 使用 Subagent Manager
+
+```python
+from skills.common import SubagentManagerFactory
+from skills.common.config import Config
+
+# 创建配置
+config = Config()
+config.set('subagent.enabled', True)
+
+# 创建 Manager
+manager = SubagentManagerFactory.create_manager(config)
+manager.start()
+
+try:
+    # 创建 subagent
+    agent_id = manager.create_subagent(
+        skill_id="go-sdk-ut",
+        task_id="write-unit-tests"
+    )
+
+    # 启动 subagent
+    def execute_test(context: dict) -> dict:
+        return {'tests_passed': 42}
+
+    manager.start_subagent(agent_id, execute_test)
+
+    # 等待结果
+    result = manager.wait_for_subagent(agent_id, timeout=30)
+finally:
+    manager.stop()
+```
+
+详细的使用文档请参考 [SUBAGENT_README.md](SUBAGENT_README.md)。
+
 ## 版本信息
 
-- 版本：1.0.0
-- 更新日期：2026-03-11
+- 版本：2.0.0
+- 更新日期：2026-03-16
+- 新增功能：
+  - Subagent 管理器
+  - 消息传递协议
+  - 并行执行支持
+  - 深度代码研究能力

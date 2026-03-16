@@ -334,3 +334,182 @@ A: 在代码中使用带超时的context：
 - 最后更新：2024-01-09
 - 兼容性：OBS SDK v3.x
 - **支持技能调用**: 可被go-sdk-dev-task技能调用和协调
+
+## 并行执行模式
+
+本技能支持并行执行模式，可同时运行多个集成测试模块，显著提升测试效率。
+
+### 启用并行执行
+
+#### 方式1：通过配置启用
+```yaml
+# 在配置文件中设置
+subagent:
+  enabled: true
+  parallel_workers: 3
+```
+
+#### 方式2：通过命令行启用
+```bash
+/go-sdk-integration --parallel
+/go-sdk-integration --parallel --workers=3
+/go-sdk-integration --modules=all --parallel
+```
+
+### 并行执行的工作原理
+
+当启用并行执行时，技能会：
+
+1. **模块分解**：将不同的测试模块分配到不同的 Subagents
+2. **并行测试执行**：同时运行多个集成测试模块
+3. **实时监控**：监控每个测试模块的进度和状态
+4. **结果汇总**：汇总所有测试模块的执行结果
+
+### 并行执行配置
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `parallel_workers` | 3 | 并行测试模块数 |
+| `test_timeout` | 300s | 每个模块的超时时间 |
+| `cleanup_timeout` | 60s | 清理操作的超时时间 |
+| `retry_failed_tests` | true | 是否重试失败的测试 |
+
+### 进度报告
+
+并行执行模式下，技能会实时报告进度：
+
+```
+[Integration] go-sdk-integration:auth-module 进度: 80% (tests: 8/10)
+[Integration] go-sdk-integration:bucket-module 进度: 60% (tests: 6/10)
+[Integration] go-sdk-integration:object-module 进度: 40% (tests: 4/10)
+[Integration] go-sdk-integration:multipart-module 进度: 20% (tests: 2/10)
+[Integration] auth-module 完成 (passed: 9/10, failed: 1/10)
+[Integration] 所有模块测试完成
+```
+
+### 结果汇总
+
+并行执行完成后，技能会生成统一的测试报告：
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00Z",
+  "execution_time": "300s",
+  "modules": [
+    {
+      "name": "auth-module",
+      "tests_total": 10,
+      "tests_passed": 9,
+      "tests_failed": 1,
+      "tests_skipped": 0,
+      "execution_time": "85s",
+      "cleanup_time": "5s",
+      "status": "partial_failure"
+    },
+    {
+      "name": "bucket-module",
+      "tests_total": 8,
+      "tests_passed": 8,
+      "tests_failed": 0,
+      "tests_skipped": 0,
+      "execution_time": "72s",
+      "cleanup_time": "3s",
+      "status": "passed"
+    },
+    {
+      "name": "object-module",
+      "tests_total": 15,
+      "tests_passed": 15,
+      "tests_failed": 0,
+      "tests_skipped": 0,
+      "execution_time": "95s",
+      "cleanup_time": "8s",
+      "status": "passed"
+    }
+  ],
+  "summary": {
+    "total_modules": 3,
+    "total_tests": 33,
+    "total_passed": 32,
+    "total_failed": 1,
+    "total_skipped": 0,
+    "overall_status": "partial_failure",
+    "success_rate": "97.0%"
+  }
+}
+```
+
+### 性能对比
+
+| 模式 | 测试模块数 | 总耗时 | 资源利用率 |
+|------|----------|--------|-----------|
+| 串行执行 | 3 | 360s | 低 (串行) |
+| 并行执行 (3 workers) | 3 | 120s | 高 (3环境并行) |
+
+**性能提升**：67% 的时间减少
+
+### 并行集成测试策略
+
+#### 1. 模块分组策略
+
+根据测试模块的依赖关系分组：
+
+- **无依赖组**：认证、基础操作（可并行）
+- **部分依赖组**：Bucket → Object → Multipart（顺序约束）
+- **环境隔离组**：使用不同测试环境的模块
+
+#### 2. 测试环境分配
+
+每个模块使用独立的测试环境：
+
+```
+test-env-1: 认证测试
+test-env-2: Bucket 操作测试
+test-env-3: Object 操作测试
+test-env-4: Multipart 操作测试
+```
+
+#### 3. 资源管理策略
+
+- **环境隔离**：每个模块使用独立的测试 Bucket
+- **并发控制**：控制对共享资源的并发访问
+- **清理策略**：每个模块完成后立即清理资源
+
+### 并行测试最佳实践
+
+1. **依赖分析**：确保并行的模块之间没有依赖关系
+2. **环境隔离**：使用独立的测试环境避免冲突
+3. **资源清理**：每个测试模块完成后立即清理资源
+4. **错误隔离**：一个模块的失败不应影响其他模块
+5. **结果汇总**：统一汇总和展示所有模块的测试结果
+
+### Mock 服务器并行使用
+
+为每个测试模块启动独立的 Mock 服务器：
+
+```go
+// 模块 1: 认证测试
+authMockServer := integration.NewMockServer()
+authMockServer.Start(":8080")
+defer authMockServer.Stop()
+
+// 模块 2: Bucket 测试
+bucketMockServer := integration.NewMockServer()
+bucketMockServer.Start(":8081")
+defer bucketMockServer.Stop()
+
+// 模块 3: Object 测试
+objectMockServer := integration.NewMockServer()
+objectMockServer.Start(":8082")
+defer objectMockServer.Stop()
+```
+
+### 故障恢复
+
+如果某个测试模块失败：
+
+- 自动记录失败信息
+- 其他模块继续执行
+- 最终报告包含所有模块的结果
+- 支持重新运行失败的模块
+- 自动清理失败模块的资源

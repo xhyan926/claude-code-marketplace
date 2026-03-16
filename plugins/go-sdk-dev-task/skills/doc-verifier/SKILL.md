@@ -279,3 +279,213 @@ jobs:
         run: |
           python skills/doc-verifier/scripts/verifier.py
 ```
+
+## 文档验证流水线
+
+本技能支持与 /sdk-doc 技能配合，构建文档生成和验证的完整流水线。
+
+### 流水线集成
+
+#### 方式1：通过 sdk-doc 自动调用
+```yaml
+# sdk-doc 会自动调用 doc-verifier
+subagent:
+  enabled: true
+  auto_verify: true
+```
+
+#### 方式2：手动执行流水线
+```bash
+# 使用文档流水线管理器
+python scripts/doc_pipeline_manager.py \
+  --modules=bucket,object,auth \
+  --output=./docs
+
+# 流水线会自动：
+# 1. 生成文档（使用 sdk-doc）
+# 2. 验证文档（使用 doc-verifier）
+# 3. 生成汇总报告
+```
+
+### 并行验证模式
+
+当启用并行验证时，技能会：
+
+1. **文档分解**：将不同模块的文档分配到不同的 Subagents
+2. **并行验证**：同时验证多个模块的文档
+3. **实时监控**：监控每个验证任务的进度和状态
+4. **问题汇总**：汇总所有文档的验证问题
+
+### 并行验证配置
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `parallel_workers` | 3 | 并行验证模块数 |
+| `verify_timeout` | 300.0 | 每个模块的验证超时时间（秒） |
+| `auto_fix_minor_issues` | true | 是否自动修复轻微问题 |
+| `issue_severity_threshold` | medium | 报告的问题严重性阈值 |
+
+### 进度报告
+
+流水线验证模式下，技能会实时报告进度：
+
+```
+[Doc Verify] doc-verifier:bucket-doc 进度: 50% (checks: 10/20)
+[Doc Verify] doc-verifier:object-doc 进度: 60% (checks: 12/20)
+[Doc Verify] doc-verifier:auth-doc 进度: 80% (checks: 16/20)
+[Doc Verify] bucket-doc 验证完成 (passed: 18/20, issues: 2)
+[Doc Verify] 所有模块验证完成
+[Doc Verify] 正在生成汇总报告...
+```
+
+### 验证结果汇总
+
+并行验证完成后，技能会生成统一的汇总报告：
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00Z",
+  "execution_time": "300s",
+  "modules": [
+    {
+      "name": "bucket-doc",
+      "doc_file": "bucket/API.md",
+      "checks_total": 20,
+      "checks_passed": 18,
+      "checks_failed": 2,
+      "issues_found": [
+        {
+          "type": "missing_example",
+          "severity": "medium",
+          "description": "部分 API 缺少示例代码"
+        },
+        {
+          "type": "inconsistent_parameter",
+          "severity": "low",
+          "description": "参数名称与代码不一致"
+        }
+      ],
+      "auto_fixed": 1,
+      "execution_time": "95s",
+      "status": "passed_with_issues"
+    },
+    {
+      "name": "object-doc",
+      "doc_file": "object/API.md",
+      "checks_total": 20,
+      "checks_passed": 20,
+      "checks_failed": 0,
+      "issues_found": [],
+      "auto_fixed": 0,
+      "execution_time": "88s",
+      "status": "passed"
+    },
+    ...
+  ],
+  "summary": {
+    "total_modules": 3,
+    "total_checks": 60,
+    "total_passed": 58,
+    "total_failed": 2,
+    "total_issues": 2,
+    "auto_fixed": 1,
+    "overall_status": "passed_with_minor_issues",
+    "pass_rate": "96.7%"
+  }
+}
+```
+
+### 性能对比
+
+| 模式 | 验证模块数 | 总耗时 | 资源利用率 |
+|------|----------|--------|-----------|
+| 串行验证 | 3 | 300s | 低 (单核) |
+| 并行验证 (3 workers) | 3 | 110s | 高 (3核) |
+
+**性能提升**：63% 的时间减少
+
+### 自动问题修复
+
+对于轻微的验证问题，技能可以自动修复：
+
+- **格式问题**：自动修复 Markdown 格式
+- **拼写错误**：自动纠正常见拼写
+- **链接问题**：自动修复简单的链接错误
+- **缩进问题**：自动调整代码缩进
+
+```python
+def auto_fix_minor_issues(doc_file: str, issues: List[dict]) -> dict:
+    """自动修复轻微问题"""
+    fixed_count = 0
+    remaining_issues = []
+
+    for issue in issues:
+        if issue['severity'] in ['low', 'trivial']:
+            # 尝试自动修复
+            fix_result = attempt_fix(doc_file, issue)
+            if fix_result['success']:
+                fixed_count += 1
+            else:
+                remaining_issues.append(issue)
+        else:
+            remaining_issues.append(issue)
+
+    return {
+        'fixed': fixed_count,
+        'remaining': remaining_issues
+    }
+```
+
+### 流水线最佳实践
+
+1. **验证顺序**：核心模块优先，扩展模块后置
+2. **问题分类**：按严重程度分类和优先处理
+3. **自动修复**：启用轻微问题的自动修复
+4. **结果汇总**：统一汇总所有模块的验证结果
+5. **质量指标**：计算文档质量分数和覆盖率
+
+### 问题跟踪
+
+跟踪验证问题的生命周期：
+
+```json
+{
+  "issue_tracking": {
+    "open_issues": [],
+    "in_progress_issues": [],
+    "fixed_issues": [],
+    "issue_metrics": {
+      "total_found": 10,
+      "auto_fixed": 3,
+      "manually_fixed": 5,
+      "remaining": 2
+    }
+  }
+}
+```
+
+### 质量报告生成
+
+生成文档质量报告：
+
+```json
+{
+  "quality_report": {
+    "timestamp": "2024-01-01T12:00:00Z",
+    "scope": "bucket,object,auth modules",
+    "overall_score": 92.5,
+    "dimension_scores": {
+      "completeness": 95.0,
+      "accuracy": 90.0,
+      "consistency": 93.0,
+      "readability": 92.0
+    },
+    "improvement_suggestions": [
+      "增加 API 示例代码覆盖率",
+      "统一参数命名风格",
+      "添加更多错误处理示例"
+    ]
+  }
+}
+```
+

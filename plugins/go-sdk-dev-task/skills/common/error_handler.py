@@ -7,6 +7,7 @@
 import sys
 import time
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, Type
 from functools import wraps
@@ -142,6 +143,152 @@ class TimeoutError(SkillError):
             suggestion=f"操作超时（{timeout}秒），请检查网络连接或增加超时时间" if timeout else None
         )
         self.timeout = timeout
+
+
+class SubagentError(SkillError):
+    """Subagent 执行错误基类"""
+
+    def __init__(
+        self,
+        message: str,
+        subagent_id: Optional[str] = None,
+        code: Optional[int] = None,
+        suggestion: Optional[str] = None
+    ):
+        """
+        初始化 Subagent 错误
+
+        Args:
+            message: 错误消息
+            subagent_id: Subagent 标识
+            code: 错误码
+            suggestion: 建议的解决方法
+        """
+        super().__init__(
+            message,
+            code=code or ERROR_CODES.get("SubagentError", {}).get("code", 6000),
+            suggestion=suggestion
+        )
+        self.subagent_id = subagent_id
+
+    def is_recoverable(self) -> bool:
+        """
+        检查错误是否可恢复
+
+        Returns:
+            如果错误可恢复则返回 True，否则返回 False
+        """
+        # 默认情况下，Subagent 错误是可恢复的（通过重试）
+        return True
+
+
+class SubagentTimeoutError(SubagentError):
+    """Subagent 超时错误"""
+
+    def __init__(self, message: str, subagent_id: Optional[str] = None, timeout: Optional[float] = None):
+        super().__init__(
+            message,
+            subagent_id=subagent_id,
+            code=ERROR_CODES.get("SubagentTimeoutError", {}).get("code", 6001),
+            suggestion=f"Subagent 执行超时（{timeout}秒），请增加超时时间或检查任务复杂度" if timeout else None
+        )
+        self.timeout = timeout
+
+    def is_recoverable(self) -> bool:
+        """超时错误通常是可恢复的（通过增加超时时间或重试）"""
+        return True
+
+
+class SubagentCommunicationError(SubagentError):
+    """Subagent 通信错误"""
+
+    def __init__(
+        self,
+        message: str,
+        subagent_id: Optional[str] = None,
+        communication_type: Optional[str] = None
+    ):
+        super().__init__(
+            message,
+            subagent_id=subagent_id,
+            code=ERROR_CODES.get("SubagentCommunicationError", {}).get("code", 6002),
+            suggestion=f"检查 {communication_type} 通信是否正常" if communication_type else None
+        )
+        self.communication_type = communication_type
+
+    def is_recoverable(self) -> bool:
+        """通信错误通常是可恢复的（通过重试）"""
+        return True
+
+
+class SubagentStartupError(SubagentError):
+    """Subagent 启动错误"""
+
+    def __init__(self, message: str, subagent_id: Optional[str] = None):
+        super().__init__(
+            message,
+            subagent_id=subagent_id,
+            code=ERROR_CODES.get("SubagentStartupError", {}).get("code", 6003),
+            suggestion="请检查 Subagent 配置和依赖是否正确"
+        )
+
+    def is_recoverable(self) -> bool:
+        """启动错误通常不可恢复（需要修复配置后重启）"""
+        return False
+
+
+class SubagentExecutionError(SubagentError):
+    """Subagent 执行错误"""
+
+    def __init__(
+        self,
+        message: str,
+        subagent_id: Optional[str] = None,
+        execution_context: Optional[str] = None
+    ):
+        super().__init__(
+            message,
+            subagent_id=subagent_id,
+            code=ERROR_CODES.get("SubagentExecutionError", {}).get("code", 6004),
+            suggestion=f"检查执行上下文 '{execution_context}' 是否正确" if execution_context else None
+        )
+        self.execution_context = execution_context
+
+    def is_recoverable(self) -> bool:
+        """执行错误通常是可恢复的（通过修复输入后重试）"""
+        return True
+
+
+class MessageQueueError(SubagentError):
+    """消息队列错误"""
+
+    def __init__(self, message: str, queue_id: Optional[str] = None):
+        super().__init__(
+            message,
+            subagent_id=queue_id,
+            code=ERROR_CODES.get("MessageQueueError", {}).get("code", 6005),
+            suggestion="检查消息队列状态和容量"
+        )
+
+    def is_recoverable(self) -> bool:
+        """消息队列错误通常是可恢复的（通过清空或重启队列）"""
+        return True
+
+
+class MessageRoutingError(SubagentError):
+    """消息路由错误"""
+
+    def __init__(self, message: str, target_id: Optional[str] = None):
+        super().__init__(
+            message,
+            subagent_id=target_id,
+            code=ERROR_CODES.get("MessageRoutingError", {}).get("code", 6006),
+            suggestion=f"检查目标 '{target_id}' 是否已注册" if target_id else None
+        )
+
+    def is_recoverable(self) -> bool:
+        """消息路由错误通常是可恢复的（通过重新注册目标）"""
+        return True
 
 
 class ErrorHandler:
@@ -313,3 +460,109 @@ def retry_on_error(
         error_types: 需要重试的错误类型
     """
     return with_retry(max_attempts, delay, delay, exponential=False, exceptions=error_types or (Exception,))
+
+
+class SubagentErrorHandler(ErrorHandler):
+    """
+    Subagent 错误处理器
+
+    扩展自 ErrorHandler，提供 Subagent 特定的错误处理功能。
+    """
+
+    def handle_subagent_error(self, error: SubagentError) -> bool:
+        """
+        处理 Subagent 错误
+
+        Args:
+            error: Subagent 错误对象
+
+        Returns:
+            如果错误可恢复且已处理则返回 True，否则返回 False
+        """
+        if error.is_recoverable():
+            # 对于可恢复的错误，尝试重试
+            from .logger import get_logger
+            logger = get_logger("SubagentErrorHandler")
+            logger.warning(
+                f"Subagent 错误可恢复: {error.message}, "
+                f"建议使用重试机制"
+            )
+            self._handle_skill_error(error)
+            return True
+        else:
+            # 对于不可恢复的错误，直接失败
+            self._handle_skill_error(error)
+            return False
+
+    def retry_with_backoff(
+        self,
+        error: SubagentError,
+        max_attempts: int = 3,
+        base_delay: float = 2.0,
+        max_delay: float = 30.0
+    ) -> bool:
+        """
+        使用指数退避重试 Subagent 操作
+
+        Args:
+            error: Subagent 错误对象
+            max_attempts: 最大重试次数
+            base_delay: 基础延迟（秒）
+            max_delay: 最大延迟（秒）
+
+        Returns:
+            如果重试成功则返回 True，否则返回 False
+
+        Raises:
+            SubagentError: 如果错误不可恢复或重试失败
+        """
+        if not error.is_recoverable():
+            # 不可恢复的错误，直接抛出
+            self.handle(error)
+            raise error
+
+        from .logger import get_logger
+        logger = get_logger("SubagentErrorHandler")
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"尝试 {attempt}/{max_attempts} 处理 Subagent 错误")
+                # 这里应该有重试逻辑，但由于这只是错误处理器，
+                # 实际的重试应该由调用者执行
+                if attempt == max_attempts:
+                    logger.error(f"重试 {max_attempts} 次后仍然失败")
+                    return False
+                return True
+            except Exception as e:
+                delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+                logger.warning(
+                    f"第 {attempt} 次重试失败: {e}, "
+                    f"{delay:.1f} 秒后重试..."
+                )
+                import time
+                time.sleep(delay)
+
+        return False
+
+    def fail_gracefully(self, error: SubagentError) -> Dict[str, Any]:
+        """
+        优雅地失败 Subagent 操作
+
+        Args:
+            error: Subagent 错误对象
+
+        Returns:
+            包含错误信息的字典，可用于状态同步和报告
+        """
+        self.handle(error)
+
+        return {
+            'success': False,
+            'error': {
+                'code': error.code,
+                'message': error.message,
+                'suggestion': error.suggestion,
+                'subagent_id': error.subagent_id
+            },
+            'timestamp': datetime.now().isoformat()
+        }

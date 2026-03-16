@@ -517,6 +517,191 @@ func BenchmarkWithResourceMonitoring(b *testing.B) {
 3. **硬件资源**：确保有足够的硬件资源
 4. **测试数据**：使用一致的数据进行测试
 
+## 并行执行模式
+
+本技能支持并行执行模式，可同时运行多个性能测试场景，显著提升测试效率。
+
+### 启用并行执行
+
+#### 方式1：通过配置启用
+```yaml
+# 在配置文件中设置
+subagent:
+  enabled: true
+  parallel_workers: 4
+```
+
+#### 方式2：通过命令行启用
+```bash
+/go-sdk-perf --parallel
+/go-sdk-perf --parallel --workers=4
+/go-sdk-perf --type=all --parallel
+```
+
+### 并行执行的工作原理
+
+当启用并行执行时，技能会：
+
+1. **场景分解**：将不同的测试场景分配到不同的 Subagents
+2. **并行基准测试**：同时运行多个基准测试
+3. **实时监控**：监控每个基准测试的进度和资源使用
+4. **结果聚合**：汇总所有基准测试的性能数据
+
+### 并行执行配置
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `parallel_workers` | 4 | 并行基准测试场景数 |
+| `bench_duration` | 根据类型变化 | 每个基准的测试时长 |
+| `concurrency_levels` | [10, 50, 100] | 并发级别测试范围 |
+| `file_sizes` | [1MB, 10MB, 100MB] | 文件大小测试范围 |
+
+### 进度报告
+
+并行执行模式下，技能会实时报告进度：
+
+```
+[Performance] go-sdk-perf:light-small-file 进度: 80% (ops: 800/1000)
+[Performance] go-sdk-perf:deep-large-file 进度: 40% (ops: 200/500)
+[Performance] go-sdk-perf:concurrent-level-10 进度: 100% (ops: 100/100)
+[Performance] go-sdk-perf:concurrent-level-50 进度: 60% (ops: 60/100)
+[Performance] 所有基准测试完成
+[Performance] 正在生成性能报告...
+```
+
+### 结果聚合
+
+并行执行完成后，技能会生成统一的性能报告：
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00Z",
+  "execution_time": "180s",
+  "benchmarks": [
+    {
+      "name": "BenchmarkLight_PutObject_SmallFile",
+      "type": "light",
+      "file_size": "1MB",
+      "results": {
+        "throughput_mb_s": 175.5,
+        "ns_per_op": 5842341,
+        "allocs_per_op": 28,
+        "baseline": 150.0,
+        "status": "ok"
+      }
+    },
+    {
+      "name": "BenchmarkDeep_PutObject_LargeFile",
+      "type": "deep",
+      "file_size": "100MB",
+      "results": {
+        "throughput_mb_s": 52.3,
+        "ns_per_op": 19582201,
+        "allocs_per_op": 2456,
+        "baseline": 50.0,
+        "status": "ok"
+      }
+    },
+    {
+      "name": "BenchmarkConcurrent_PutObject_Concurrency-10",
+      "type": "concurrent",
+      "concurrency": 10,
+      "results": {
+        "throughput_mb_s": 180.2,
+        "ns_per_op": 5653815,
+        "allocs_per_op": 30,
+        "baseline": 150.0,
+        "status": "ok"
+      }
+    },
+    ...
+  ],
+  "summary": {
+    "total_benchmarks": 12,
+    "passed": 11,
+    "regressions": 1,
+    "avg_improvement": "12.5%",
+    "max_improvement": "35.2%"
+  }
+}
+```
+
+### 性能对比
+
+| 模式 | 测试场景数 | 总耗时 | 资源利用率 |
+|------|----------|--------|-----------|
+| 串行执行 | 12 | 600s | 低 (单核) |
+| 并行执行 (4 workers) | 12 | 180s | 高 (4核) |
+
+**性能提升**：70% 的时间减少
+
+### 并行性能测试策略
+
+#### 1. 测试场景分组
+
+根据测试类型和资源需求分组：
+
+- **轻量级组**：小文件、低并发、短时长（快速完成）
+- **深度组**：大文件、高并发、长时长（资源密集）
+- **并发测试组**：不同并发级别测试
+- **内存测试组**：内存使用和垃圾回收测试
+
+#### 2. 资源分配策略
+
+- **I/O密集型**：文件上传下载（充分利用I/O）
+- **CPU密集型**：签名计算、加密（分配更多CPU）
+- **内存密集型**：大文件处理（限制内存使用）
+- **网络密集型**：所有网络操作（控制并发数）
+
+#### 3. 测试矩阵
+
+定义测试矩阵以全面覆盖性能空间：
+
+```
+并发级别: [1, 10, 50, 100, 500]
+文件大小: [1MB, 10MB, 100MB]
+操作类型: [PutObject, GetObject, ListObjects]
+```
+
+### 基线对比和退化检测
+
+并行执行时会自动对比基线数据：
+
+```json
+{
+  "baseline_comparison": {
+    "current": {
+      "throughput": 175.5,
+      "timestamp": "2024-01-01T12:00:00Z"
+    },
+    "baseline": {
+      "throughput": 150.0,
+      "timestamp": "2023-12-01T12:00:00Z"
+    },
+    "change": "+17.0%",
+    "threshold": "±10%",
+    "status": "improved"
+  }
+}
+```
+
+### 并行执行最佳实践
+
+1. **合理设置worker数**：根据CPU核心数和内存容量设置
+2. **资源监控**：实时监控CPU、内存、网络使用情况
+3. **测试隔离**：每个基准测试使用独立的测试数据
+4. **结果验证**：确保并行结果与串行结果一致
+5. **基线更新**：定期更新性能基线数据
+
+### 故障恢复
+
+如果某个基准测试失败：
+
+- 自动记录错误和性能数据
+- 其他基准测试继续执行
+- 最终报告包含成功和失败的测试
+- 支持重新运行失败的基准
+
 ## 技能版本
 
 - 版本：1.1.0

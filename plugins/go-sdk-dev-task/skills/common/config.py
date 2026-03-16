@@ -243,3 +243,155 @@ class Config:
         config = cls()
         config._config = config_dict.copy()
         return config
+
+    # Subagent 相关配置方法
+
+    def is_subagent_enabled(self) -> bool:
+        """
+        检查是否启用 subagent 功能
+
+        Returns:
+            bool: 如果启用则返回 True，否则返回 False
+        """
+        return self.get_bool('subagent.enabled', False)
+
+    def get_parallel_workers(self) -> int:
+        """
+        获取并行工作数
+
+        Returns:
+            int: 并行工作数，默认为 2
+        """
+        return self.get_int('subagent.parallel_workers', 2)
+
+    def get_research_timeout(self) -> float:
+        """
+        获取研究任务超时时间
+
+        Returns:
+            float: 超时时间（秒），默认为 300 秒
+        """
+        return self.get_float('subagent.research_timeout', 300.0)
+
+    def get_execution_timeout(self) -> float:
+        """
+        获取执行任务超时时间
+
+        Returns:
+            float: 超时时间（秒），默认为 600 秒
+        """
+        return self.get_float('subagent.execution_timeout', 600.0)
+
+    def get_heartbeat_interval(self) -> float:
+        """
+        获取心跳间隔
+
+        Returns:
+            float: 心跳间隔（秒），默认为 30 秒
+        """
+        return self.get_float('subagent.heartbeat_interval', 30.0)
+
+    def get_max_retries(self) -> int:
+        """
+        获取最大重试次数
+
+        Returns:
+            int: 最大重试次数，默认为 3
+        """
+        return self.get_int('subagent.max_retries', 3)
+
+    def get_retry_delay(self) -> float:
+        """
+        获取重试延迟
+
+        Returns:
+            float: 重试延迟（秒），默认为 2.0 秒
+        """
+        return self.get_float('subagent.retry_delay', 2.0)
+
+    def get_message_queue_size(self) -> int:
+        """
+        获取消息队列大小
+
+        Returns:
+            int: 消息队列大小，默认为 100
+        """
+        return self.get_int('subagent.message_queue_size', 100)
+
+    def get_subagent_config(self, skill_id: str) -> Dict[str, Any]:
+        """
+        获取特定技能的 subagent 配置
+
+        Args:
+            skill_id: 技能标识
+
+        Returns:
+            Dict[str, Any]: subagent 配置字典
+        """
+        subagent_configs = self.get_dict('subagent.skills', {})
+        return subagent_configs.get(skill_id, {})
+
+    def is_skill_subagent_enabled(self, skill_id: str) -> bool:
+        """
+        检查特定技能是否启用 subagent
+
+        Args:
+            skill_id: 技能标识
+
+        Returns:
+            bool: 如果启用则返回 True，否则返回 False
+        """
+        skill_config = self.get_subagent_config(skill_id)
+        if skill_config:
+            return skill_config.get('enabled', False)
+        return self.is_subagent_enabled()
+
+    def get_skill_parallel_workers(self, skill_id: str) -> int:
+        """
+        获取特定技能的并行工作数
+
+        Args:
+            skill_id: 技能标识
+
+        Returns:
+            int: 并行工作数
+        """
+        skill_config = self.get_subagent_config(skill_id)
+        if skill_config and 'parallel_workers' in skill_config:
+            return skill_config['parallel_workers']
+        return self.get_parallel_workers()
+
+    def get_skill_timeout(self, skill_id: str, default: Optional[float] = None) -> float:
+        """
+        获取特定技能的超时时间
+
+        Args:
+            skill_id: 技能标识
+            default: 默认超时时间（秒）
+
+        Returns:
+            float: 超时时间（秒）
+        """
+        skill_config = self.get_subagent_config(skill_id)
+        if skill_config and 'timeout' in skill_config:
+            return skill_config['timeout']
+        return default or self.get_execution_timeout()
+
+    def get_default_subagent_config(self) -> Dict[str, Any]:
+        """
+        获取默认的 subagent 配置
+
+        Returns:
+            Dict[str, Any]: 默认配置字典
+        """
+        return {
+            'enabled': False,
+            'parallel_workers': 2,
+            'research_timeout': 300.0,
+            'execution_timeout': 600.0,
+            'heartbeat_interval': 30.0,
+            'max_retries': 3,
+            'retry_delay': 2.0,
+            'message_queue_size': 100,
+            'skills': {}
+        }
